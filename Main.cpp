@@ -34,6 +34,7 @@ private:
     HLayout* tabBar = nullptr;  // TAB标签栏
     int tabCount = 1;  // TAB计数，从1开始（日志TAB已存在）
     std::vector<Button*> tabButtons;  // TAB按钮列表
+    FileListView* currentFileListView = nullptr;  // 当前文件列表视图
 
 public:
     MainFrm(int width, int height) : Window(width, height) {
@@ -80,11 +81,31 @@ public:
         mainTabs = (TabLayout*)this->FindControl("mainTabs");
         tabBar = (HLayout*)this->FindControl("tabBar");
         
+        // 绑定选择文件夹按钮事件
+        Button* btnSelectFolder = (Button*)this->FindControl("btnSelectFolder");
+        if (btnSelectFolder) {
+            AddLog(L"btnSelectFolder found and event handler set");
+            btnSelectFolder->EventHandler = [this](Control* sender, EventArgs& args) {
+                if (args.EventType == Event::OnMouseDown) {
+                    AddLog(L"Select folder button clicked");
+                    AddLog(currentFileListView ? L"currentFileListView is: NOT NULL" : L"currentFileListView is: NULL");
+                    if (currentFileListView) {
+                        AddLog(L"Calling SelectFolderAndLoad...");
+                        SelectFolderAndLoad(currentFileListView);
+                    } else {
+                        AddLog(L"No file list view available");
+                    }
+                }
+            };
+        } else {
+            AddLog(L"btnSelectFolder not found!");
+        }
+        
         // 创建第一个固定TAB：日志窗口
         Control* logTabPage = new Control(mainTabs);
         logTabPage->Name = L"logTabPage";
         logTabPage->SetDockStyle(DockStyle::Fill);
-        logTabPage->Style.BackColor = Color(144, 238, 144);  // 淡绿色背景
+        logTabPage->Style.BackColor = Color(255, 255, 255);  // 白色背景
         
         // 创建TextBox - 参考demo的方式
         logBox = new TextBox();
@@ -93,12 +114,9 @@ public:
         logBox->Name = L"logBox";
         logBox->SetMultiLine(true);
         logBox->SetReadOnly(true);
-        logBox->Style.BackColor = Color(144, 238, 144);  // 淡绿色背景
-        logBox->Style.ForeColor = Color(255, 0, 0);  // 红色文字
+        logBox->Style.BackColor = Color(255, 255, 255);  // 白色背景
+        logBox->Style.ForeColor = Color(0, 0, 0);  // 黑色文字
         logBox->Style.FontSize = 12;
-        
-        // 立即设置测试文本
-        logBox->SetText(L"TEST TEXT - TextBox is working!");
         
         // 添加到TAB布局
         mainTabs->Add(logTabPage);
@@ -195,24 +213,55 @@ public:
         tabPage->Name = L"tabPage" + std::to_wstring(tabCount);
         tabPage->SetDockStyle(DockStyle::Fill);
         
+        // 在tabPage上监听双击事件
+        tabPage->EventHandler = [this, tabPage](Control* sender, EventArgs& args) {
+            if (args.EventType == Event::OnMouseDoubleClick) {
+                AddLog(L"Double click on tabPage detected");
+                // 查找tabPage中的FileListView
+                FileListView* fileListView = nullptr;
+                for (auto ctl : tabPage->GetControls()) {
+                    fileListView = dynamic_cast<FileListView*>(ctl);
+                    if (fileListView) break;
+                }
+                if (fileListView) {
+                    SelectFolderAndLoad(fileListView);
+                }
+            }
+        };
+        
         // 创建文件列表视图
         FileListView* fileListView = new FileListView(tabPage);
+        tabPage->Add(fileListView);  // 显式添加到tabPage的控件列表
         fileListView->SetDockStyle(DockStyle::Fill);
         
         AddLog(L"FileListView created");
         
-        // 设置双击和拖放事件 - 绑定到fileListView而不是tabPage
-        fileListView->EventHandler = [this, fileListView](Control* sender, EventArgs& args) {
-            if (args.EventType == Event::OnMouseDoubleClick) {
-                AddLog(L"Double click detected on FileListView");
-                SelectFolderAndLoad(fileListView);
-            }
+        // 设置日志回调
+        fileListView->OnLog = [this](const std::wstring& msg) {
+            AddLog(msg);
         };
+        
+        // 设置双击空白区域的回调
+        fileListView->OnDoubleClickEmpty = [this, fileListView]() {
+            AddLog(L"Double click empty area detected");
+            SelectFolderAndLoad(fileListView);
+        };
+        
+        // 保存当前文件列表视图的引用
+        currentFileListView = fileListView;
         
         // 添加到TAB布局
         mainTabs->Add(tabPage);
         
         AddLog(L"Tab added to TabLayout");
+        
+        // 强制刷新TAB布局，确保页面有正确的大小
+        mainTabs->RefreshLayout();
+        tabPage->RefreshLayout();
+        fileListView->RefreshLayout();
+        
+        AddLog(L"TabPage size: " + std::to_wstring(tabPage->Width()) + L"x" + std::to_wstring(tabPage->Height()));
+        AddLog(L"FileListView size after refresh: " + std::to_wstring(fileListView->Width()) + L"x" + std::to_wstring(fileListView->Height()));
         
         // 创建TAB按钮
         Button* newTabBtn = new Button(tabBar);
@@ -237,6 +286,13 @@ public:
     }
     
     void SelectFolderAndLoad(FileListView* fileListView) {
+        AddLog(fileListView ? L"SelectFolderAndLoad called, fileListView pointer: valid" : L"SelectFolderAndLoad called, fileListView pointer: null");
+        
+        if (!fileListView) {
+            AddLog(L"ERROR: fileListView is null!");
+            return;
+        }
+        
         // 打开文件夹选择对话框
         BROWSEINFO bi = { 0 };
         bi.lpszTitle = L"选择文件夹";
@@ -247,12 +303,36 @@ public:
             wchar_t path[MAX_PATH];
             if (SHGetPathFromIDList(pidl, path)) {
                 std::wstring folderPath(path);
+                AddLog(L"Calling SetFolderPath...");
                 fileListView->SetFolderPath(folderPath);
+                AddLog(L"SetFolderPath returned");
+                
+                // 强制刷新TAB布局和窗口
+                if (mainTabs) {
+                    mainTabs->RefreshLayout();
+                    AddLog(L"mainTabs size: " + std::to_wstring(mainTabs->Width()) + L"x" + std::to_wstring(mainTabs->Height()));
+                    AddLog(L"mainTabs page index: " + std::to_wstring(mainTabs->GetPageIndex()));
+                    AddLog(L"mainTabs controls count: " + std::to_wstring(mainTabs->GetControls().size()));
+                }
+                this->Refresh();
+                AddLog(L"UI refreshed");
                 
                 AddLog(L"Selected folder: " + folderPath);
                 UpdateStatus(L"已选择文件夹", folderPath.c_str(), L"");
             }
             CoTaskMemFree(pidl);
+        }
+    }
+    
+    // 重写窗口双击事件
+    virtual void OnMouseDoubleClick(MouseButton mbtn, const Point& point) override {
+        Window::OnMouseDoubleClick(mbtn, point);
+        AddLog(L"Window OnMouseDoubleClick called");
+        
+        // 如果当前在文件列表TAB，触发文件夹选择
+        if (mainTabs && mainTabs->GetPageIndex() > 0 && currentFileListView) {
+            AddLog(L"In file list tab, calling SelectFolderAndLoad");
+            SelectFolderAndLoad(currentFileListView);
         }
     }
     

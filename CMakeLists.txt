@@ -10,6 +10,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") # 静态
 set(RESOURCE_FILES App.rc) # 添加资源文件
 
 add_compile_options("/utf-8") # 设置工程代码文件是UTF8编码
+add_compile_options("/FS") # 允许多个编译器实例同时写入PDB文件
 add_definitions(-DUNICODE -D_UNICODE) # 设置UNICODE字符集
 
 
