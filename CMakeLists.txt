@@ -24,6 +24,7 @@ set(PROJECT_SOURCES
     AppUtil.cpp
     PathUtil.hpp
     PathUtil.cpp
+    FileListView.hpp
 )
 
 
@@ -38,6 +39,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     d2d1
     dwrite
     windowscodecs
+    shell32
 )
 
 # 忽略特定链接器警告

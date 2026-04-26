@@ -4,6 +4,18 @@
 #include <string>
 #include <string_view>
 #include <sstream>
+#include <vector>
+#include <filesystem>
+
+struct FileInfo {
+    std::wstring fullPath;
+    uintmax_t fileSize;
+    std::filesystem::file_time_type modifyTime;
+    
+    FileInfo() : fileSize(0) {}
+    FileInfo(const std::wstring& path, uintmax_t size, std::filesystem::file_time_type time)
+        : fullPath(path), fileSize(size), modifyTime(time) {}
+};
 
 class AppUtil
 {
@@ -40,4 +52,10 @@ public:
         (wss << ... << args);   // 折叠表达式支持wstring/int等
         SaveLog(wss.str());     // 调用宽字符基础重载
     }
+    
+    // 格式化文件大小
+    static std::wstring FormatFileSize(uintmax_t size);
+    
+    // 格式化文件时间
+    static std::wstring FormatFileTime(std::filesystem::file_time_type time);
 };

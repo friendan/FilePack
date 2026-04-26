@@ -39,6 +39,41 @@ std::string AppUtil::GetTimeStr(){
     return buf;
 }
 
+std::wstring AppUtil::FormatFileSize(uintmax_t size) {
+    const wchar_t* units[] = { L"B", L"KB", L"MB", L"GB", L"TB" };
+    int unitIndex = 0;
+    double fileSize = static_cast<double>(size);
+    
+    while (fileSize >= 1024.0 && unitIndex < 4) {
+        fileSize /= 1024.0;
+        unitIndex++;
+    }
+    
+    wchar_t buffer[64];
+    if (unitIndex == 0) {
+        swprintf_s(buffer, L"%llu %s", size, units[unitIndex]);
+    } else {
+        swprintf_s(buffer, L"%.2f %s", fileSize, units[unitIndex]);
+    }
+    
+    return std::wstring(buffer);
+}
+
+std::wstring AppUtil::FormatFileTime(std::filesystem::file_time_type time) {
+    auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+        time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+    std::time_t tt = std::chrono::system_clock::to_time_t(sctp);
+    std::tm tm;
+    localtime_s(&tm, &tt);
+    
+    wchar_t buffer[64];
+    swprintf_s(buffer, L"%04d-%02d-%02d %02d:%02d:%02d",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        tm.tm_hour, tm.tm_min, tm.tm_sec);
+    
+    return std::wstring(buffer);
+}
+
 static std::mutex g_log_mutex;
 static std::string g_log_filename;
 
