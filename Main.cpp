@@ -122,8 +122,6 @@ public:
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
-    // 初始化GDI+
-    DrawGrid::Inst()->InitGdiPlus();
     Application app;
     app.EnableHighDpi();
     
@@ -133,7 +131,5 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     frm.Show();
     int result = app.Exec();
     
-    // 卸载GDI+
-    DrawGrid::Inst()->UninitGdiPlus();
     return result;
 }

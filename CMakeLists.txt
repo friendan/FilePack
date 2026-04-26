@@ -7,7 +7,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") # 静态链接CRT
-set(RESOURCE_FILES FilePack.rc) # 添加资源文件
+set(RESOURCE_FILES App.rc) # 添加资源文件
 
 add_compile_options("/utf-8") # 设置工程代码文件是UTF8编码
 add_definitions(-DUNICODE -D_UNICODE) # 设置UNICODE字符集
