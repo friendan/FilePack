@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <chrono>
 #include <Application.h>
 #include <Window.h>
 #include <VLayout.h>
@@ -127,17 +128,11 @@ public:
         tempPage->Style.BackColor = Color(200, 200, 200);  // 灰色
         mainTabs->Add(tempPage);
         
-        // 强制刷新布局
-        mainTabs->RefreshLayout();
-        this->Refresh();
-        
         // 切换回第一个TAB（日志TAB）
         mainTabs->SetPageIndex(0);
-        mainTabs->RefreshLayout();
         
         // 移除临时页面
         mainTabs->Remove(tempPage, true);
-        mainTabs->RefreshLayout();
         
         // 测试日志功能
         AddLog(L"Program started");
@@ -149,7 +144,20 @@ public:
             tabButtons.push_back(btnTabLog);
             btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
                 if (args.EventType == Event::OnMouseDown) {
+                    auto startTime = std::chrono::high_resolution_clock::now();
+                    AddLog(L"[PERF] Switching to log tab");
+                    
                     mainTabs->SetPageIndex(0);
+                    
+                    auto endTime = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+                    AddLog(L"[PERF] SetPageIndex took: " + std::to_wstring(duration) + L"ms");
+                    
+                    this->Invalidate();
+                    
+                    auto endTime2 = std::chrono::high_resolution_clock::now();
+                    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(endTime2 - startTime).count();
+                    AddLog(L"[PERF] Invalidate + Total took: " + std::to_wstring(duration2) + L"ms");
                 }
             };
         }
@@ -255,13 +263,8 @@ public:
         
         AddLog(L"Tab added to TabLayout");
         
-        // 强制刷新TAB布局，确保页面有正确的大小
-        mainTabs->RefreshLayout();
-        tabPage->RefreshLayout();
-        fileListView->RefreshLayout();
-        
-        AddLog(L"TabPage size: " + std::to_wstring(tabPage->Width()) + L"x" + std::to_wstring(tabPage->Height()));
-        AddLog(L"FileListView size after refresh: " + std::to_wstring(fileListView->Width()) + L"x" + std::to_wstring(fileListView->Height()));
+        // 只在添加时刷新一次，不要多次刷新
+        this->Refresh();
         
         // 创建TAB按钮
         Button* newTabBtn = new Button(tabBar);
@@ -269,9 +272,24 @@ public:
         newTabBtn->SetFixedWidth(100);
         
         int newTabIndex = mainTabs->GetControls().size() - 1;
-        newTabBtn->EventHandler = [this, newTabIndex](Control* sender, EventArgs& args) {
+        newTabBtn->EventHandler = [this, newTabIndex, tabTitle](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
+                auto startTime = std::chrono::high_resolution_clock::now();
+                AddLog(L"[PERF] Switching to tab: " + tabTitle);
+                
+                // 直接切换页面，不触发额外的刷新
                 mainTabs->SetPageIndex(newTabIndex);
+                
+                auto endTime = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+                AddLog(L"[PERF] SetPageIndex took: " + std::to_wstring(duration) + L"ms");
+                
+                // 只刷新窗口，让系统自动处理布局
+                this->Invalidate();
+                
+                auto endTime2 = std::chrono::high_resolution_clock::now();
+                auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(endTime2 - startTime).count();
+                AddLog(L"[PERF] Total switch time: " + std::to_wstring(duration2) + L"ms");
             }
         };
         
@@ -307,14 +325,8 @@ public:
                 fileListView->SetFolderPath(folderPath);
                 AddLog(L"SetFolderPath returned");
                 
-                // 强制刷新TAB布局和窗口
-                if (mainTabs) {
-                    mainTabs->RefreshLayout();
-                    AddLog(L"mainTabs size: " + std::to_wstring(mainTabs->Width()) + L"x" + std::to_wstring(mainTabs->Height()));
-                    AddLog(L"mainTabs page index: " + std::to_wstring(mainTabs->GetPageIndex()));
-                    AddLog(L"mainTabs controls count: " + std::to_wstring(mainTabs->GetControls().size()));
-                }
-                this->Refresh();
+                // 只刷新一次窗口，避免多次刷新
+                this->Invalidate();
                 AddLog(L"UI refreshed");
                 
                 AddLog(L"Selected folder: " + folderPath);

@@ -85,6 +85,15 @@ protected:
         OnItemDoubleClick(arg.Location);
     }
     
+    // 重写布局方法，如果不可见则跳过布局以提高性能
+    virtual void OnLayout() override {
+        // 如果控件不可见或大小为0，跳过布局
+        if (!this->IsVisible() || this->Width() == 0 || this->Height() == 0) {
+            return;
+        }
+        VLayout::OnLayout();
+    }
+    
     // 外部可以调用的选择文件夹方法
     void TriggerSelectFolder() {
         AppUtil::SaveLog("[FileListView] TriggerSelectFolder called");
