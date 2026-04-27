@@ -42,12 +42,22 @@ public:
         // 设置自身为垂直布局
         this->SetDockStyle(DockStyle::Fill);
         
+        // 阻止双击事件向上传播到父窗口
+        this->EventPassThrough = Event::None;
+        
         // 直接使用this作为内容布局，不再创建m_contentLayout
         // 添加表头
         HLayout* headerLayout = new HLayout(this);
         this->Add(headerLayout);
         headerLayout->SetFixedHeight(30);
         headerLayout->Style.BackColor = Color(240, 240, 240);  // 浅灰色背景
+        
+        Label* indexHeader = new Label(headerLayout);
+        headerLayout->Add(indexHeader);
+        indexHeader->SetText(L"序号");
+        indexHeader->SetFixedWidth(60);
+        indexHeader->Style.FontSize = 12;
+        indexHeader->Style.ForeColor = Color(0, 0, 0);
         
         Label* pathHeader = new Label(headerLayout);
         headerLayout->Add(pathHeader);
@@ -81,7 +91,7 @@ public:
 protected:
     // 重写鼠标双击事件
     virtual void OnMouseDoubleClick(const MouseEventArgs& arg) override {
-        Control::OnMouseDoubleClick(arg);
+        // 不调用Control::OnMouseDoubleClick，阻止事件向上传播
         OnItemDoubleClick(arg.Location);
     }
     
@@ -142,11 +152,23 @@ protected:
                 });
             
             // 添加到列表
-            for (const auto& file : m_files) {
+            for (size_t i = 0; i < m_files.size(); i++) {
+                const auto& file = m_files[i];
+                
                 HLayout* itemLayout = new HLayout(this);
                 this->Add(itemLayout);
                 itemLayout->SetFixedHeight(25);
-                itemLayout->Style.BackColor = Color(255, 255, 255);  // 白色背景
+                // 交替行背景色
+                itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
+                
+                // 序号列
+                Label* indexLabel = new Label(itemLayout);
+                itemLayout->Add(indexLabel);
+                indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
+                indexLabel->SetFixedWidth(60);
+                indexLabel->Style.FontSize = 11;
+                indexLabel->Style.ForeColor = Color(100, 100, 100);
+                indexLabel->TextAlign = TextAlign::MiddleCenter;
                 
                 Label* pathLabel = new Label(itemLayout);
                 itemLayout->Add(pathLabel);
@@ -200,6 +222,7 @@ protected:
                 
                 // 打开文件
                 ShellExecuteW(NULL, L"open", file.fullPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                return;  // 打开文件后直接返回，不再触发其他事件
             } else {
                 // 双击空白区域，触发回调
                 AppUtil::SaveLog("[FileListView] Double clicked empty area");

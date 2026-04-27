@@ -304,6 +304,7 @@ public:
     }
     
     void SelectFolderAndLoad(FileListView* fileListView) {
+        AddLog(L"[DEBUG] SelectFolderAndLoad ENTER");
         AddLog(fileListView ? L"SelectFolderAndLoad called, fileListView pointer: valid" : L"SelectFolderAndLoad called, fileListView pointer: null");
         
         if (!fileListView) {
@@ -316,7 +317,9 @@ public:
         bi.lpszTitle = L"选择文件夹";
         bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
         
+        AddLog(L"[DEBUG] Calling SHBrowseForFolder...");
         LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+        AddLog(L"[DEBUG] SHBrowseForFolder returned");
         if (pidl != NULL) {
             wchar_t path[MAX_PATH];
             if (SHGetPathFromIDList(pidl, path)) {
@@ -334,20 +337,10 @@ public:
             }
             CoTaskMemFree(pidl);
         }
+        AddLog(L"[DEBUG] SelectFolderAndLoad EXIT");
     }
     
-    // 重写窗口双击事件
-    virtual void OnMouseDoubleClick(MouseButton mbtn, const Point& point) override {
-        Window::OnMouseDoubleClick(mbtn, point);
-        AddLog(L"Window OnMouseDoubleClick called");
-        
-        // 如果当前在文件列表TAB，触发文件夹选择
-        if (mainTabs && mainTabs->GetPageIndex() > 0 && currentFileListView) {
-            AddLog(L"In file list tab, calling SelectFolderAndLoad");
-            SelectFolderAndLoad(currentFileListView);
-        }
-    }
-    
+    // 重写窗口关闭事件
     virtual void OnClose(bool& close) override {
         Application::Exit(0);
     }
