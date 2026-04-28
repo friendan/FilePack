@@ -36,6 +36,7 @@ private:
     int tabCount = 1;  // TAB计数，从1开始（日志TAB已存在）
     std::vector<Button*> tabButtons;  // TAB按钮列表
     FileListView* currentFileListView = nullptr;  // 当前文件列表视图
+    int m_currentTabIndex = 0;  // 当前选中的TAB索引
 
 public:
     MainFrm(int width, int height) : Window(width, height) {
@@ -142,12 +143,14 @@ public:
         Button* btnTabLog = (Button*)this->FindControl("btnTabLog");
         if (btnTabLog) {
             tabButtons.push_back(btnTabLog);
+            UpdateTabButtonStates(0);
             btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
                 if (args.EventType == Event::OnMouseDown) {
                     auto startTime = std::chrono::high_resolution_clock::now();
                     AddLog(L"[PERF] Switching to log tab");
                     
                     mainTabs->SetPageIndex(0);
+                    UpdateTabButtonStates(0);
                     
                     auto endTime = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
@@ -201,6 +204,17 @@ public:
     void ClearLog() {
         if (logBox) {
             logBox->SetText(L"");
+        }
+    }
+    
+    void UpdateTabButtonStates(int selectedIndex) {
+        m_currentTabIndex = selectedIndex;
+        for (size_t i = 0; i < tabButtons.size(); i++) {
+            if (i == (size_t)selectedIndex) {
+                tabButtons[i]->Style.BackColor = Color(194, 216, 166);
+            } else {
+                tabButtons[i]->Style.BackColor = Color(230, 230, 230);
+            }
         }
     }
     
@@ -272,13 +286,6 @@ public:
         newTabBtn->SetFixedWidth(100);
         newTabBtn->Margin.Left = 2;
         newTabBtn->Margin.Right = 2;
-        newTabBtn->Style.BackColor = Color(230, 230, 230);
-        newTabBtn->Style.ForeColor = Color(0, 0, 0);
-        newTabBtn->Style.FontSize = 12;
-        newTabBtn->Style.Border.TopLeftRadius = 3;
-        newTabBtn->Style.Border.TopRightRadius = 3;
-        newTabBtn->HoverStyle.BackColor = Color(210, 210, 210);
-        newTabBtn->ActiveStyle.BackColor = Color(180, 180, 180);
         
         int newTabIndex = mainTabs->GetControls().size() - 1;
         newTabBtn->EventHandler = [this, newTabIndex, tabTitle](Control* sender, EventArgs& args) {
@@ -288,6 +295,7 @@ public:
                 
                 // 直接切换页面，不触发额外的刷新
                 mainTabs->SetPageIndex(newTabIndex);
+                UpdateTabButtonStates(newTabIndex);
                 
                 auto endTime = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
@@ -304,6 +312,9 @@ public:
         
         tabBar->Add(newTabBtn);
         tabButtons.push_back(newTabBtn);
+        
+        // 设置新添加的TAB为选中状态
+        UpdateTabButtonStates(newTabIndex);
         
         // 切换到新添加的TAB
         mainTabs->SetPageIndex(newTabIndex);
