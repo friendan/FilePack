@@ -142,6 +142,13 @@ public:
         Button* btnTabLog = (Button*)this->FindControl("btnTabLog");
         if (btnTabLog) {
             tabButtons.push_back(btnTabLog);
+            btnTabLog->Margin.Left = 2;
+            btnTabLog->Margin.Right = 2;
+            btnTabLog->Style.BackColor = Color(230, 230, 230);
+            btnTabLog->Style.ForeColor = Color(0, 0, 0);
+            btnTabLog->Style.FontSize = 12;
+            btnTabLog->HoverStyle.BackColor = Color(210, 210, 210);
+            btnTabLog->ActiveStyle.BackColor = Color(180, 180, 180);
             btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
                 if (args.EventType == Event::OnMouseDown) {
                     auto startTime = std::chrono::high_resolution_clock::now();
@@ -270,6 +277,13 @@ public:
         Button* newTabBtn = new Button(tabBar);
         newTabBtn->SetText(tabTitle.c_str());
         newTabBtn->SetFixedWidth(100);
+        newTabBtn->Margin.Left = 2;
+        newTabBtn->Margin.Right = 2;
+        newTabBtn->Style.BackColor = Color(230, 230, 230);
+        newTabBtn->Style.ForeColor = Color(0, 0, 0);
+        newTabBtn->Style.FontSize = 12;
+        newTabBtn->HoverStyle.BackColor = Color(210, 210, 210);
+        newTabBtn->ActiveStyle.BackColor = Color(180, 180, 180);
         
         int newTabIndex = mainTabs->GetControls().size() - 1;
         newTabBtn->EventHandler = [this, newTabIndex, tabTitle](Control* sender, EventArgs& args) {
