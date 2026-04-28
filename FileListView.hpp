@@ -17,13 +17,17 @@ private:
     std::wstring m_folderPath;
     VScrollBar m_scrollBar;
     int m_scrollOffset = 0;
+    int m_headerHeight = 30;
+    int m_itemHeight = 25;
+    std::vector<HLayout*> m_itemLayouts;
     
 public:
-    // 双击空白区域的回调函数
     std::function<void()> OnDoubleClickEmpty = nullptr;
-    
-    // 日志回调函数
     std::function<void(const std::wstring&)> OnLog = nullptr;
+
+    virtual ScrollBar* GetScrollBar() override {
+        return &m_scrollBar;
+    }
     
     void SetFolderPath(const std::wstring& path) {
         m_folderPath = path;
@@ -39,18 +43,21 @@ public:
     }
     
     void Init() {
-        // 设置自身为垂直布局
         this->SetDockStyle(DockStyle::Fill);
-        
-        // 阻止双击事件向上传播到父窗口
         this->EventPassThrough = Event::None;
         
-        // 直接使用this作为内容布局，不再创建m_contentLayout
-        // 添加表头
+        m_scrollBar.Parent = this;
+        m_scrollBar.SetFixedWidth(14);
+        m_scrollBar.OffsetCallback = [this](int offset) {
+            m_scrollOffset = offset;
+            OffsetItems(offset);
+            this->Invalidate();
+        };
+        
         HLayout* headerLayout = new HLayout(this);
         this->Add(headerLayout);
-        headerLayout->SetFixedHeight(30);
-        headerLayout->Style.BackColor = Color(240, 240, 240);  // 浅灰色背景
+        headerLayout->SetFixedHeight(m_headerHeight);
+        headerLayout->Style.BackColor = Color(240, 240, 240);
         
         Label* indexHeader = new Label(headerLayout);
         headerLayout->Add(indexHeader);
@@ -62,7 +69,7 @@ public:
         Label* pathHeader = new Label(headerLayout);
         headerLayout->Add(pathHeader);
         pathHeader->SetText(L"文件路径");
-        pathHeader->SetFixedWidth(500);  // 固定宽度
+        pathHeader->SetFixedWidth(500);
         pathHeader->Style.FontSize = 12;
         pathHeader->Style.ForeColor = Color(0, 0, 0);
         
@@ -80,57 +87,52 @@ public:
         timeHeader->Style.FontSize = 12;
         timeHeader->Style.ForeColor = Color(0, 0, 0);
         
-        // 强制刷新布局
         this->RefreshLayout();
         
         if (OnLog) {
-            OnLog(L"[FileListView] Init completed, controls count: " + std::to_wstring(this->GetControls().size()));
+            OnLog(L"[FileListView] Init completed");
         }
     }
     
+    void OffsetItems(int offset) {
+        for (size_t i = 0; i < m_itemLayouts.size(); i++) {
+            HLayout* item = m_itemLayouts[i];
+            int baseY = m_headerHeight + i * m_itemHeight;
+            item->SetY(baseY + offset);
+        }
+        this->Invalidate();
+    }
+    
 protected:
-    // 重写鼠标双击事件
     virtual void OnMouseDoubleClick(const MouseEventArgs& arg) override {
-        // 不调用Control::OnMouseDoubleClick，阻止事件向上传播
         OnItemDoubleClick(arg.Location);
     }
     
-    // 重写布局方法，如果不可见则跳过布局以提高性能
     virtual void OnLayout() override {
-        // 如果控件不可见或大小为0，跳过布局
         if (!this->IsVisible() || this->Width() == 0 || this->Height() == 0) {
             return;
         }
         VLayout::OnLayout();
+        m_scrollBar.RefreshScroll();
     }
     
-    // 外部可以调用的选择文件夹方法
+public:
     void TriggerSelectFolder() {
-        AppUtil::SaveLog("[FileListView] TriggerSelectFolder called");
         if (!m_folderPath.empty()) {
-            // 如果已经有文件夹，重新加载
             LoadFilesFromFolder(m_folderPath);
-        } else {
-            // 否则需要外部调用SelectFolderAndLoad
-            AppUtil::SaveLog("[FileListView] No folder path set, waiting for external call");
         }
     }
     
-    // LoadFilesFromFolder的实现
     void LoadFilesFromFolder(const std::wstring& folderPath) {
-        if (OnLog) OnLog(L"[FileListView] Loading files from: " + folderPath);
+        if (OnLog) OnLog(L"[FileListView] Loading: " + folderPath);
         
-        // 清除旧内容（保留表头）
-        while (this->GetControls().size() > 1) {
-            Control* ctl = this->GetControl(1);
-            if (ctl) {
-                this->Remove(ctl, true);
-            }
+        for (auto item : m_itemLayouts) {
+            this->Remove(item, true);
         }
+        m_itemLayouts.clear();
         m_files.clear();
         
         try {
-            // 递归遍历文件夹
             int fileCount = 0;
             for (const auto& entry : std::filesystem::recursive_directory_iterator(folderPath)) {
                 if (entry.is_regular_file()) {
@@ -143,25 +145,24 @@ protected:
                 }
             }
             
-            if (OnLog) OnLog(L"[FileListView] Found " + std::to_wstring(fileCount) + L" files");
+            if (OnLog) OnLog(L"[FileListView] Found: " + std::to_wstring(fileCount) + L" files");
             
-            // 按修改时间从大到小排序
             std::sort(m_files.begin(), m_files.end(), 
                 [](const FileInfo& a, const FileInfo& b) {
                     return a.modifyTime > b.modifyTime;
                 });
             
-            // 添加到列表
+            int y = m_headerHeight;
             for (size_t i = 0; i < m_files.size(); i++) {
                 const auto& file = m_files[i];
                 
                 HLayout* itemLayout = new HLayout(this);
                 this->Add(itemLayout);
-                itemLayout->SetFixedHeight(25);
-                // 交替行背景色
+                itemLayout->SetFixedHeight(m_itemHeight);
+                itemLayout->SetY(y);
                 itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
+                m_itemLayouts.push_back(itemLayout);
                 
-                // 序号列
                 Label* indexLabel = new Label(itemLayout);
                 itemLayout->Add(indexLabel);
                 indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
@@ -173,7 +174,7 @@ protected:
                 Label* pathLabel = new Label(itemLayout);
                 itemLayout->Add(pathLabel);
                 pathLabel->SetText(file.fullPath.c_str());
-                pathLabel->SetFixedWidth(500);  // 固定宽度
+                pathLabel->SetFixedWidth(500);
                 pathLabel->Style.FontSize = 11;
                 pathLabel->Style.ForeColor = Color(0, 0, 0);
                 
@@ -190,52 +191,35 @@ protected:
                 timeLabel->SetFixedWidth(150);
                 timeLabel->Style.FontSize = 11;
                 timeLabel->Style.ForeColor = Color(0, 0, 0);
+                
+                y += m_itemHeight;
             }
             
-            if (OnLog) OnLog(L"[FileListView] Added " + std::to_wstring(m_files.size()) + L" items to list");
+            if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
             
-            // 强制刷新布局
             this->RefreshLayout();
-            
-            if (OnLog) {
-                OnLog(L"[FileListView] This controls count: " + std::to_wstring(this->GetControls().size()));
-                OnLog(L"[FileListView] Size: " + std::to_wstring(this->Width()) + L"x" + std::to_wstring(this->Height()));
-            }
+            m_scrollOffset = 0;
         }
         catch (const std::exception& e) {
-            if (OnLog) OnLog(L"[FileListView] Error loading files: " + std::wstring(e.what(), e.what() + strlen(e.what())));
+            if (OnLog) OnLog(L"[FileListView] Error: " + std::wstring(e.what(), e.what() + strlen(e.what())));
         }
     }
     
     void OnItemDoubleClick(const Point& point) {
-        // 处理双击事件，可以打开文件或执行其他操作
-        // 简单实现：计算点击的是哪一行
-        int headerHeight = 30;
-        int itemHeight = 25;
-        int relativeY = point.Y - headerHeight + m_scrollOffset;
+        int relativeY = point.Y + m_scrollOffset;
         
-        if (relativeY >= 0) {
-            int itemIndex = relativeY / itemHeight;
+        if (relativeY >= m_headerHeight) {
+            int itemIndex = (relativeY - m_headerHeight) / m_itemHeight;
             if (itemIndex >= 0 && itemIndex < (int)m_files.size()) {
                 const FileInfo& file = m_files[itemIndex];
-                AppUtil::SaveLog("[FileListView] Double clicked file: ", AppUtil::WStrToStr(file.fullPath));
-                
-                // 打开文件
+                AppUtil::SaveLog("[FileListView] Open: ", AppUtil::WStrToStr(file.fullPath));
                 ShellExecuteW(NULL, L"open", file.fullPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-                return;  // 打开文件后直接返回，不再触发其他事件
-            } else {
-                // 双击空白区域，触发回调
-                AppUtil::SaveLog("[FileListView] Double clicked empty area");
-                if (OnDoubleClickEmpty) {
-                    OnDoubleClickEmpty();
-                }
+                return;
             }
-        } else {
-            // 双击表头或上方空白区域
-            AppUtil::SaveLog("[FileListView] Double clicked header or above");
-            if (OnDoubleClickEmpty) {
-                OnDoubleClickEmpty();
-            }
+        }
+        
+        if (OnDoubleClickEmpty) {
+            OnDoubleClickEmpty();
         }
     }
     
