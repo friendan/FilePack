@@ -16,7 +16,7 @@
   <vbox id="tabContainer" margin="5">
     <!-- TAB标签栏 -->
     <hbox id="tabBar" height="30" margin="0,0,0,2">
-      <button class="btn" id="btnTabLog" width="80" text="日志"></button>
+      <button class="tabbtn" id="btnTabLog" width="100" text="日志" margin-left="2" margin-right="2"></button>
       <spacer width="5"></spacer>
     </hbox>
     <!-- Tab内容区域 -->
@@ -68,6 +68,21 @@
     background-color: #FFFFFF;
     border: 1px #D0D0D0 solid;
     border-radius: 5px;
+  }
+  
+  /* TAB按钮样式 */
+  .tabbtn {
+    background-color: #E6E6E6;
+    border: 1px solid #D0D0D0;
+    border-radius: 3px 3px 0 0;
+    font-size: 12px;
+    color: #000000;
+  }
+  .tabbtn:hover {
+    background-color: #D2D2D2;
+  }
+  .tabbtn:active {
+    background-color: #B4B4B4;
   }
   
   /* 日志框样式 */
