@@ -102,9 +102,8 @@ public:
     
     void OffsetItems(int offset) {
         for (size_t i = 0; i < m_itemLayouts.size(); i++) {
-            HLayout* item = m_itemLayouts[i];
-            int baseY = i * m_itemHeight;
-            item->SetY(baseY + offset);
+            int y = m_headerHeight + i * m_itemHeight + offset;
+            m_itemLayouts[i]->SetY(y);
         }
         this->Invalidate();
     }
@@ -131,9 +130,13 @@ protected:
                 xpos += child->Width();
             }
             
-            // 确保 header 在最前面绘制
             this->Remove(m_headerLayout);
             this->Add(m_headerLayout);
+        }
+        
+        for (size_t i = 0; i < m_itemLayouts.size(); i++) {
+            int y = m_headerHeight + i * m_itemHeight;
+            m_itemLayouts[i]->SetY(y);
         }
         
         m_scrollBar.RefreshScroll();
@@ -175,14 +178,12 @@ public:
                     return a.modifyTime > b.modifyTime;
                 });
             
-            int y = 0;
             for (size_t i = 0; i < m_files.size(); i++) {
                 const auto& file = m_files[i];
                 HLayout* itemLayout = new HLayout(this);
-                // 添加到 FileListView（不是 header）
                 this->Add(itemLayout);
+                itemLayout->SetFixedWidth(Width() - 14);
                 itemLayout->SetFixedHeight(m_itemHeight);
-                itemLayout->SetY(y);
                 itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
                 m_itemLayouts.push_back(itemLayout);
                 
@@ -214,8 +215,6 @@ public:
                 timeLabel->SetFixedWidth(150);
                 timeLabel->Style.FontSize = 11;
                 timeLabel->Style.ForeColor = Color(0, 0, 0);
-                
-                y += m_itemHeight;
             }
             
             if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
