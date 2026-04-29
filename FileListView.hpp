@@ -20,10 +20,18 @@ private:
     int m_headerHeight = 30;
     int m_itemHeight = 25;
     std::vector<HLayout*> m_itemLayouts;
+    HLayout* m_headerLayout = nullptr;
+    Size m_cachedContentSize;
     
 public:
     std::function<void()> OnDoubleClickEmpty = nullptr;
     std::function<void(const std::wstring&)> OnLog = nullptr;
+
+    virtual const Size& GetContentSize() override {
+        m_cachedContentSize.Width = Width();
+        m_cachedContentSize.Height = m_headerHeight + (int)m_itemLayouts.size() * m_itemHeight;
+        return m_cachedContentSize;
+    }
 
     virtual ScrollBar* GetScrollBar() override {
         return &m_scrollBar;
@@ -54,65 +62,80 @@ public:
             this->Invalidate();
         };
         
-        HLayout* headerLayout = new HLayout(this);
-        this->Add(headerLayout);
-        headerLayout->SetFixedHeight(m_headerHeight);
-        headerLayout->Style.BackColor = Color(240, 240, 240);
+        m_headerLayout = new HLayout(this);
+        m_headerLayout->SetFixedHeight(m_headerHeight);
+        m_headerLayout->Style.BackColor = Color(200, 200, 200);
+        this->Add(m_headerLayout);
         
-        Label* indexHeader = new Label(headerLayout);
-        headerLayout->Add(indexHeader);
-        indexHeader->SetText(L"序号");
-        indexHeader->SetFixedWidth(60);
-        indexHeader->Style.FontSize = 12;
-        indexHeader->Style.ForeColor = Color(0, 0, 0);
+        Label* label1 = new Label(m_headerLayout);
+        label1->SetFixedHeight(m_headerHeight);
+        label1->SetFixedWidth(60);
+        label1->SetText(L"序号");
+        label1->Style.FontSize = 12;
+        label1->Style.BackColor = Color(220, 220, 220);
+        label1->TextAlign = TextAlign::MiddleCenter;
+        m_headerLayout->Add(label1);
         
-        Label* pathHeader = new Label(headerLayout);
-        headerLayout->Add(pathHeader);
-        pathHeader->SetText(L"文件路径");
-        pathHeader->SetFixedWidth(500);
-        pathHeader->Style.FontSize = 12;
-        pathHeader->Style.ForeColor = Color(0, 0, 0);
+        Label* label2 = new Label(m_headerLayout);
+        label2->SetFixedHeight(m_headerHeight);
+        label2->SetFixedWidth(500);
+        label2->SetText(L"文件路径");
+        label2->Style.FontSize = 12;
+        m_headerLayout->Add(label2);
         
-        Label* sizeHeader = new Label(headerLayout);
-        headerLayout->Add(sizeHeader);
-        sizeHeader->SetText(L"大小");
-        sizeHeader->SetFixedWidth(100);
-        sizeHeader->Style.FontSize = 12;
-        sizeHeader->Style.ForeColor = Color(0, 0, 0);
+        Label* label3 = new Label(m_headerLayout);
+        label3->SetFixedHeight(m_headerHeight);
+        label3->SetFixedWidth(100);
+        label3->SetText(L"大小");
+        label3->Style.FontSize = 12;
+        m_headerLayout->Add(label3);
         
-        Label* timeHeader = new Label(headerLayout);
-        headerLayout->Add(timeHeader);
-        timeHeader->SetText(L"修改时间");
-        timeHeader->SetFixedWidth(150);
-        timeHeader->Style.FontSize = 12;
-        timeHeader->Style.ForeColor = Color(0, 0, 0);
+        Label* label4 = new Label(m_headerLayout);
+        label4->SetFixedHeight(m_headerHeight);
+        label4->SetFixedWidth(150);
+        label4->SetText(L"修改时间");
+        label4->Style.FontSize = 12;
+        m_headerLayout->Add(label4);
         
-        this->RefreshLayout();
-        
-        if (OnLog) {
-            OnLog(L"[FileListView] Init completed");
-        }
+        this->Invalidate();
     }
     
     void OffsetItems(int offset) {
         for (size_t i = 0; i < m_itemLayouts.size(); i++) {
             HLayout* item = m_itemLayouts[i];
-            int baseY = m_headerHeight + i * m_itemHeight;
+            int baseY = i * m_itemHeight;
             item->SetY(baseY + offset);
         }
         this->Invalidate();
     }
     
 protected:
+    virtual void OnChildPaint(PaintEventArgs& args) override {
+        VLayout::OnChildPaint(args);
+    }
+    
     virtual void OnMouseDoubleClick(const MouseEventArgs& arg) override {
         OnItemDoubleClick(arg.Location);
     }
     
     virtual void OnLayout() override {
-        if (!this->IsVisible() || this->Width() == 0 || this->Height() == 0) {
-            return;
-        }
         VLayout::OnLayout();
+        
+        if (m_headerLayout) {
+            m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
+            m_headerLayout->RefreshLayout();
+            
+            int xpos = 0;
+            for (auto& child : m_headerLayout->GetControls()) {
+                child->SetX(xpos);
+                xpos += child->Width();
+            }
+            
+            // 确保 header 在最前面绘制
+            this->Remove(m_headerLayout);
+            this->Add(m_headerLayout);
+        }
+        
         m_scrollBar.RefreshScroll();
     }
     
@@ -152,11 +175,11 @@ public:
                     return a.modifyTime > b.modifyTime;
                 });
             
-            int y = m_headerHeight;
+            int y = 0;
             for (size_t i = 0; i < m_files.size(); i++) {
                 const auto& file = m_files[i];
-                
                 HLayout* itemLayout = new HLayout(this);
+                // 添加到 FileListView（不是 header）
                 this->Add(itemLayout);
                 itemLayout->SetFixedHeight(m_itemHeight);
                 itemLayout->SetY(y);
