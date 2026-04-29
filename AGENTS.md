@@ -30,3 +30,57 @@ ezui库完整源码在目录ezui里面，请自己阅读了解其具体用法
 1. 生成VS2022解决方案命令：cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug
 2. 编译工程命令：cmake --build build --config Debug
 
+# 经验总结
+
+## FileListView 表头固定实现
+
+### 问题描述
+在 FileListView 中实现固定表头（表头始终在顶部，内容滚动）时遇到的坑。
+
+### 问题根因
+ezui 的 VLayout/HLayout 没有自动固定表头的机制，需要手动处理。
+
+### 关键的坑
+
+1. **header 宽度为 0**：初始化时 headerLayout 宽度是 0（Parent 还没设置好尺寸），需要 `SetFixedHeight()` 而不是 `SetAutoHeight()`。
+
+2. **label 高度为 0**：创建 Label 时需要 `SetFixedHeight(m_headerHeight)`，否则 h=0 看不见。
+
+3. **label 位置重叠**：HLayout::OnLayout() 不会自动水平排列子控件，需要在 FileListView::OnLayout() 里手动设置 `child->SetX(xpos)`。
+
+4. **最关键的：没有触发重绘**！创建 header 后如果不调用 `this->Invalidate()`，UI 不会重绘，表头就不会显示。
+
+5. **文件列表覆盖表头**：加载文件后调用 RefreshLayout() 会改变子控件顺序，导致 header 被移到后面被覆盖。需要在 OnLayout() 里每次都把 header 重新 Add 到最后确保在顶层绘制。
+
+### 最终解决方案
+
+```cpp
+// Init() 里创建 header 后必须调用
+this->Invalidate();
+
+// OnLayout() 里
+if (m_headerLayout) {
+    m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
+    m_headerLayout->RefreshLayout();
+    
+    // 手动排列 header 内部的子控件
+    int xpos = 0;
+    for (auto& child : m_headerLayout->GetControls()) {
+        child->SetX(xpos);
+        xpos += child->Width();
+    }
+    
+    // 确保 header 在最前绘制（不被后面的内容覆盖）
+    this->Remove(m_headerLayout);
+    this->Add(m_headerLayout);
+}
+```
+
+### 调试技巧
+
+当遇到 UI 不显示时：
+1. 在 Init() 和 OnLayout() 里加日志，打印控件的 x, y, w, h
+2. 检查 IsVisible() 状态
+3. 检查 OnPaint / OnChildPaint 是否被调用
+4. 如果创建后不显示，尝试调用 Invalidate() 强制重绘
+
