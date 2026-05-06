@@ -4,6 +4,7 @@
 #include <Label.h>
 #include <HLayout.h>
 #include <VScrollBar.h>
+#include <UIManager.h>
 #include "AppUtil.hpp"
 #include <algorithm>
 #include <functional>
@@ -21,6 +22,8 @@ private:
     int m_itemHeight = 25;
     std::vector<HLayout*> m_itemLayouts;
     HLayout* m_headerLayout = nullptr;
+    VLayout* m_contentLayout = nullptr;
+    UIManager m_ui;
     Size m_cachedContentSize;
     
 public:
@@ -62,42 +65,47 @@ public:
             this->Invalidate();
         };
         
-        m_headerLayout = new HLayout(this);
-        m_headerLayout->SetFixedHeight(m_headerHeight);
-        m_headerLayout->Style.BackColor = Color(200, 200, 200);
-        this->Add(m_headerLayout);
+        LoadXmlLayout();
         
-        Label* label1 = new Label(m_headerLayout);
-        label1->SetFixedHeight(m_headerHeight);
-        label1->SetFixedWidth(60);
-        label1->SetText(L"序号");
-        label1->Style.FontSize = 12;
-        label1->Style.BackColor = Color(220, 220, 220);
-        label1->TextAlign = TextAlign::MiddleCenter;
-        m_headerLayout->Add(label1);
+        m_headerLayout = (HLayout*)this->FindControl("header");
+        m_contentLayout = (VLayout*)this->FindControl("content");
         
-        Label* label2 = new Label(m_headerLayout);
-        label2->SetFixedHeight(m_headerHeight);
-        label2->SetFixedWidth(500);
-        label2->SetText(L"文件路径");
-        label2->Style.FontSize = 12;
-        m_headerLayout->Add(label2);
-        
-        Label* label3 = new Label(m_headerLayout);
-        label3->SetFixedHeight(m_headerHeight);
-        label3->SetFixedWidth(100);
-        label3->SetText(L"大小");
-        label3->Style.FontSize = 12;
-        m_headerLayout->Add(label3);
-        
-        Label* label4 = new Label(m_headerLayout);
-        label4->SetFixedHeight(m_headerHeight);
-        label4->SetFixedWidth(150);
-        label4->SetText(L"修改时间");
-        label4->Style.FontSize = 12;
-        m_headerLayout->Add(label4);
+        this->EventHandler = [this](Control* sender, EventArgs& args) {
+            if (args.EventType == Event::OnMouseDoubleClick) {
+                MouseEventArgs* mouseArgs = dynamic_cast<MouseEventArgs*>(&args);
+                if (mouseArgs) {
+                    OnItemDoubleClick(mouseArgs->Location);
+                }
+            }
+        };
         
         this->Invalidate();
+    }
+    
+    void LoadXmlLayout() {
+        HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_FILELISTVIEW_LAYOUT), RT_HTML);
+        if (!hRsrc) {
+            hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_FILELISTVIEW_LAYOUT), L"HTML");
+        }
+        
+        if (hRsrc) {
+            HGLOBAL hGlobal = LoadResource(NULL, hRsrc);
+            if (hGlobal) {
+                DWORD size = SizeofResource(NULL, hRsrc);
+                const char* xmlData = (const char*)LockResource(hGlobal);
+                if (xmlData && size > 0) {
+                    std::wstring xmlContent;
+                    int wideLen = MultiByteToWideChar(CP_UTF8, 0, xmlData, size, NULL, 0);
+                    if (wideLen > 0) {
+                        xmlContent.resize(wideLen);
+                        MultiByteToWideChar(CP_UTF8, 0, xmlData, size, &xmlContent[0], wideLen);
+                    }
+                    
+                    m_ui.LoadXmlData(xmlContent.c_str());
+                    m_ui.SetupUI(this);
+                }
+            }
+        }
     }
     
     void OffsetItems(int offset) {
@@ -117,37 +125,13 @@ protected:
         OnItemDoubleClick(arg.Location);
     }
     
-virtual void OnLayout() override {
+    virtual void OnLayout() override {
         VLayout::OnLayout();
         
+        // 确保 header 在最前绘制
         if (m_headerLayout) {
-            m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
-            
-            // 直接设置表头各列位置，不调用 RefreshLayout
-            int xpos = 0;
-            auto& hc = m_headerLayout->GetControls();
-            for (auto& child : hc) {
-                child->SetX(xpos);
-                xpos += child->Width();
-            }
-            
-            // 确保 header 在最前
             this->Remove(m_headerLayout);
             this->Add(m_headerLayout);
-        }
-        
-        // 文件行各列不依赖 HLayout 使用固定布局，直接设置每个 label 的位置
-        for (size_t i = 0; i < m_itemLayouts.size(); i++) {
-            m_itemLayouts[i]->SetY(m_headerHeight + i * m_itemHeight);
-            m_itemLayouts[i]->SetFixedHeight(m_itemHeight);
-            
-            // 直接设置子控件位置，不刷新布局
-            int xpos = 0;
-            auto& children = m_itemLayouts[i]->GetControls();
-            for (auto& child : children) {
-                child->SetX(xpos);
-                xpos += child->Width();
-            }
         }
         
         m_scrollBar.RefreshScroll();
@@ -164,7 +148,7 @@ public:
         if (OnLog) OnLog(L"[FileListView] Loading: " + folderPath);
         
         for (auto item : m_itemLayouts) {
-            this->Remove(item, true);
+            m_contentLayout->Remove(item, true);
         }
         m_itemLayouts.clear();
         m_files.clear();
@@ -191,9 +175,8 @@ public:
             
             for (size_t i = 0; i < m_files.size(); i++) {
                 const auto& file = m_files[i];
-                HLayout* itemLayout = new HLayout(this);
-                this->Add(itemLayout);
-                itemLayout->SetFixedWidth(Width() - 14);
+                HLayout* itemLayout = new HLayout(m_contentLayout);
+                m_contentLayout->Add(itemLayout);
                 itemLayout->SetFixedHeight(m_itemHeight);
                 itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
                 m_itemLayouts.push_back(itemLayout);

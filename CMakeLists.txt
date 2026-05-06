@@ -51,7 +51,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # 确保资源文件依赖关系
-set_property(SOURCE app.rc PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Main.htm)
+set_property(SOURCE App.rc PROPERTY OBJECT_DEPENDS 
+    ${CMAKE_CURRENT_SOURCE_DIR}/Main.htm
+    ${CMAKE_CURRENT_SOURCE_DIR}/FileListView.htm
+)
 
 
 

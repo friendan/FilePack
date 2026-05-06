@@ -15,5 +15,6 @@ IDI_APP_ICON            ICON                    "App.ico"
 //
 
 IDR_MAIN_LAYOUT         HTML                    "Main.htm"
+IDR_FILELISTVIEW_LAYOUT HTML                    "FileListView.htm"
 
 /////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@
 // Used by BitGrid.rc
 
 #define IDR_MAIN_LAYOUT                 101
+#define IDR_FILELISTVIEW_LAYOUT         103
 #define IDI_APP_ICON                    102
 
 // Next default values for new objects
