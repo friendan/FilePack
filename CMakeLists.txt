@@ -20,6 +20,8 @@ file(GLOB EZUI_SOURCES "ezui/sources/*.cpp") # 收集ezui源文件
 # 添加项目源文件
 set(PROJECT_SOURCES
     main.cpp
+    MainForm.h
+    MainForm.cpp
     AppConst.hpp
     AppUtil.hpp
     AppUtil.cpp
