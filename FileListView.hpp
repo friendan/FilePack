@@ -55,7 +55,7 @@ public:
     
     void Init() {
         this->SetDockStyle(DockStyle::Fill);
-        this->EventPassThrough = Event::None;
+        this->EventPassThrough = Event::OnMouseDoubleClick;
         
         m_scrollBar.Parent = this;
         m_scrollBar.SetFixedWidth(14);
@@ -70,14 +70,15 @@ public:
         m_headerLayout = (HLayout*)this->FindControl("header");
         m_contentLayout = (VLayout*)this->FindControl("content");
         
-        this->EventHandler = [this](Control* sender, EventArgs& args) {
-            if (args.EventType == Event::OnMouseDoubleClick) {
-                MouseEventArgs* mouseArgs = dynamic_cast<MouseEventArgs*>(&args);
-                if (mouseArgs) {
-                    OnItemDoubleClick(mouseArgs->Location);
+        if (m_contentLayout) {
+            m_contentLayout->EventPassThrough = Event::OnMouseDoubleClick;
+            m_contentLayout->EventHandler = [this](Control* sender, EventArgs& args) {
+                if (args.EventType == Event::OnMouseDoubleClick) {
+                    MouseEventArgs& mouseArgs = (MouseEventArgs&)args;
+                    OnItemDoubleClick(mouseArgs.Location);
                 }
-            }
-        };
+            };
+        }
         
         this->Invalidate();
     }
