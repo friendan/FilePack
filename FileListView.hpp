@@ -133,6 +133,8 @@ protected:
         if (m_headerLayout) {
             this->Remove(m_headerLayout);
             this->Add(m_headerLayout);
+            // 强制设置 header 位置到顶部
+            m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
         }
         
         m_scrollBar.RefreshScroll();
@@ -179,6 +181,7 @@ public:
                 HLayout* itemLayout = new HLayout(m_contentLayout);
                 m_contentLayout->Add(itemLayout);
                 itemLayout->SetFixedHeight(m_itemHeight);
+                // 奇偶行不同颜色
                 itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
                 m_itemLayouts.push_back(itemLayout);
                 
@@ -186,30 +189,22 @@ public:
                 itemLayout->Add(indexLabel);
                 indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
                 indexLabel->SetFixedWidth(60);
-                indexLabel->Style.FontSize = 11;
-                indexLabel->Style.ForeColor = Color(100, 100, 100);
                 indexLabel->TextAlign = TextAlign::MiddleCenter;
                 
                 Label* pathLabel = new Label(itemLayout);
                 itemLayout->Add(pathLabel);
                 pathLabel->SetText(file.fullPath.c_str());
                 pathLabel->SetFixedWidth(500);
-                pathLabel->Style.FontSize = 11;
-                pathLabel->Style.ForeColor = Color(0, 0, 0);
                 
                 Label* sizeLabel = new Label(itemLayout);
                 itemLayout->Add(sizeLabel);
                 sizeLabel->SetText(AppUtil::FormatFileSize(file.fileSize).c_str());
                 sizeLabel->SetFixedWidth(100);
-                sizeLabel->Style.FontSize = 11;
-                sizeLabel->Style.ForeColor = Color(0, 0, 0);
                 
                 Label* timeLabel = new Label(itemLayout);
                 itemLayout->Add(timeLabel);
                 timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
                 timeLabel->SetFixedWidth(150);
-                timeLabel->Style.FontSize = 11;
-                timeLabel->Style.ForeColor = Color(0, 0, 0);
             }
             
             if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
