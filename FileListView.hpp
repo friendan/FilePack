@@ -32,7 +32,7 @@ public:
 
     virtual const Size& GetContentSize() override {
         m_cachedContentSize.Width = Width();
-        m_cachedContentSize.Height = m_headerHeight + (int)m_itemLayouts.size() * m_itemHeight;
+        m_cachedContentSize.Height = (int)m_itemLayouts.size() * m_itemHeight;
         return m_cachedContentSize;
     }
 
@@ -111,7 +111,7 @@ public:
     
     void OffsetItems(int offset) {
         for (size_t i = 0; i < m_itemLayouts.size(); i++) {
-            int y = m_headerHeight + i * m_itemHeight + offset;
+            int y = i * m_itemHeight + offset;
             m_itemLayouts[i]->SetY(y);
         }
         this->Invalidate();
@@ -128,15 +128,6 @@ protected:
     
     virtual void OnLayout() override {
         VLayout::OnLayout();
-        
-        // 确保 header 在最前绘制
-        if (m_headerLayout) {
-            this->Remove(m_headerLayout);
-            this->Add(m_headerLayout);
-            // 强制设置 header 位置到顶部
-            m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
-        }
-        
         m_scrollBar.RefreshScroll();
     }
     
