@@ -18,7 +18,6 @@ private:
     std::wstring m_folderPath;
     VScrollBar m_scrollBar;
     int m_scrollOffset = 0;
-    int m_headerHeight = 30;
     int m_itemHeight = 25;
     std::vector<HLayout*> m_itemLayouts;
     HLayout* m_headerLayout = nullptr;
@@ -210,15 +209,12 @@ public:
     
     void OnItemDoubleClick(const Point& point) {
         int relativeY = point.Y + m_scrollOffset;
-        
-        if (relativeY >= m_headerHeight) {
-            int itemIndex = (relativeY - m_headerHeight) / m_itemHeight;
-            if (itemIndex >= 0 && itemIndex < (int)m_files.size()) {
-                const FileInfo& file = m_files[itemIndex];
-                AppUtil::SaveLog("[FileListView] Open: ", AppUtil::WStrToStr(file.fullPath));
-                ShellExecuteW(NULL, L"open", file.fullPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-                return;
-            }
+        int itemIndex = relativeY / m_itemHeight;
+        if (itemIndex >= 0 && itemIndex < (int)m_files.size()) {
+            const FileInfo& file = m_files[itemIndex];
+            AppUtil::SaveLog("[FileListView] Open: ", AppUtil::WStrToStr(file.fullPath));
+            ShellExecuteW(NULL, L"open", file.fullPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            return;
         }
         
         if (OnDoubleClickEmpty) {
