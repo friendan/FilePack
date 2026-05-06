@@ -117,26 +117,37 @@ protected:
         OnItemDoubleClick(arg.Location);
     }
     
-    virtual void OnLayout() override {
+virtual void OnLayout() override {
         VLayout::OnLayout();
         
         if (m_headerLayout) {
             m_headerLayout->SetRect({ 0, 0, Width(), m_headerHeight });
-            m_headerLayout->RefreshLayout();
             
+            // 直接设置表头各列位置，不调用 RefreshLayout
             int xpos = 0;
-            for (auto& child : m_headerLayout->GetControls()) {
+            auto& hc = m_headerLayout->GetControls();
+            for (auto& child : hc) {
                 child->SetX(xpos);
                 xpos += child->Width();
             }
             
+            // 确保 header 在最前
             this->Remove(m_headerLayout);
             this->Add(m_headerLayout);
         }
         
+        // 文件行各列不依赖 HLayout 使用固定布局，直接设置每个 label 的位置
         for (size_t i = 0; i < m_itemLayouts.size(); i++) {
-            int y = m_headerHeight + i * m_itemHeight;
-            m_itemLayouts[i]->SetY(y);
+            m_itemLayouts[i]->SetY(m_headerHeight + i * m_itemHeight);
+            m_itemLayouts[i]->SetFixedHeight(m_itemHeight);
+            
+            // 直接设置子控件位置，不刷新布局
+            int xpos = 0;
+            auto& children = m_itemLayouts[i]->GetControls();
+            for (auto& child : children) {
+                child->SetX(xpos);
+                xpos += child->Width();
+            }
         }
         
         m_scrollBar.RefreshScroll();
