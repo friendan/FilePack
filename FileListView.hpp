@@ -55,6 +55,36 @@ public:
     }
     
     ~FileListView() {
+        HWND hWnd = Hwnd();
+        if (hWnd) {
+            RemoveWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this);
+        }
+    }
+    
+    static LRESULT CALLBACK StaticWndProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+        if (uMsg == WM_RBUTTONDOWN) {
+            FileListView* self = (FileListView*)dwRefData;
+            if (!self) return DefSubclassProc(hW, uMsg, wParam, lParam);
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            // 遍历父控件链，计算 FileListView 在窗口客户区的位置
+            int absX = 0, absY = 0;
+            Control* c = self;
+            while (c) {
+                auto r = c->GetRect();
+                absX += r.X;
+                absY += r.Y;
+                c = c->Parent;
+                if (c && c->IsWindow()) break;
+            }
+            // 只响应 FileListView 自身区域内的右键
+            if (pt.x >= absX && pt.x < absX + self->Width() &&
+                pt.y >= absY && pt.y < absY + self->Height()) {
+                MouseEventArgs args(Event::OnMouseDown, Point(pt.x - absX, pt.y - absY), MouseButton::Right);
+                self->OnRightClick(args);
+                return 0;
+            }
+        }
+        return DefSubclassProc(hW, uMsg, wParam, lParam);
     }
     
     void Init() {
@@ -95,31 +125,7 @@ public:
         ezui::BeginInvoke([this]() {
             HWND hWnd = Hwnd();
             if (hWnd) {
-                SetWindowSubclass(hWnd, [](HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT {
-                    if (uMsg == WM_RBUTTONDOWN) {
-                        FileListView* self = (FileListView*)dwRefData;
-                        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-                        // 遍历父控件链，计算 FileListView 在窗口客户区的位置
-                        int absX = 0, absY = 0;
-                        Control* c = self;
-                        while (c) {
-                            auto r = c->GetRect();
-                            absX += r.X;
-                            absY += r.Y;
-                            c = c->Parent;
-                            if (c && c->IsWindow()) break;
-                        }
-                        // 只响应 FileListView 自身区域内的右键
-                        auto sr = self->GetRect();
-                        if (pt.x >= absX && pt.x < absX + self->Width() &&
-                            pt.y >= absY && pt.y < absY + self->Height()) {
-                            MouseEventArgs args(Event::OnMouseDown, Point(pt.x - absX, pt.y - absY), MouseButton::Right);
-                            self->OnRightClick(args);
-                            return 0;
-                        }
-                    }
-                    return DefSubclassProc(hW, uMsg, wParam, lParam);
-                }, (UINT_PTR)this, (DWORD_PTR)this);
+                SetWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
             }
         });
 
