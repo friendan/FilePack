@@ -244,7 +244,13 @@ void MainForm::AddNewTab() {
         }
     };
     
-    tabBar->Add(newTabBtn);
+    // 插入到 btnAddTab 之前（加号按钮始终在最后一个）
+    int addBtnIndex = tabBar->IndexOf(btnAddTab);
+    if (addBtnIndex >= 0) {
+        tabBar->Insert(addBtnIndex, newTabBtn);
+    } else {
+        tabBar->Add(newTabBtn);
+    }
     tabButtons.push_back(newTabBtn);
     
     UpdateTabButtonStates(newTabIndex);
