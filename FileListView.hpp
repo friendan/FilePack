@@ -120,11 +120,16 @@ public:
             m_contentLayout->EventHandler = [this](Control* sender, EventArgs& args) {
                 if (args.EventType == Event::OnMouseDoubleClick) {
                     MouseEventArgs& mouseArgs = (MouseEventArgs&)args;
-                    OnItemDoubleClick(mouseArgs.Location);
+                    // 只处理空白区域（没有文件行的区域）
+                    if (mouseArgs.Location.Y >= (int)m_itemLayouts.size() * m_itemHeight - m_scrollOffset) {
+                        if (OnDoubleClickEmpty) {
+                            OnDoubleClickEmpty();
+                        }
+                    }
                 }
             };
         }
-        
+
         this->Invalidate();
     }
     
@@ -271,6 +276,27 @@ public:
                 itemLayout->Add(timeLabel);
                 timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
                 timeLabel->SetFixedWidth(150);
+                
+                // 行内所有子控件穿透双击事件
+                indexLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                pathLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                timeLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                
+                itemLayout->EventPassThrough = Event::OnMouseDoubleClick;
+                // 行双击事件：切换复选框
+                int cbIndex = i;
+                itemLayout->EventHandler = [this, cbIndex](Control* sender, EventArgs& args) {
+                    if (args.EventType == Event::OnMouseDoubleClick) {
+                        if (cbIndex < (int)m_checkBoxs.size() && m_checkBoxs[cbIndex]) {
+                            CheckBox* cb = m_checkBoxs[cbIndex];
+                            cb->SetCheck(!cb->GetCheck());
+                            if (cb->CheckedChanged) {
+                                cb->CheckedChanged(cb, cb->GetCheck());
+                            }
+                        }
+                    }
+                };
             }
             
             if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
@@ -287,9 +313,14 @@ public:
         int relativeY = point.Y + m_scrollOffset;
         int itemIndex = relativeY / m_itemHeight;
         if (itemIndex >= 0 && itemIndex < (int)m_files.size()) {
-            const FileInfo& file = m_files[itemIndex];
-            AppUtil::SaveLog("[FileListView] Open: ", AppUtil::WStrToStr(file.fullPath));
-            ShellExecuteW(NULL, L"open", file.fullPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            // 切换复选框状态（等同于点击复选框）
+            if (itemIndex < (int)m_checkBoxs.size() && m_checkBoxs[itemIndex]) {
+                CheckBox* cb = m_checkBoxs[itemIndex];
+                cb->SetCheck(!cb->GetCheck());
+                if (cb->CheckedChanged) {
+                    cb->CheckedChanged(cb, cb->GetCheck());
+                }
+            }
             return;
         }
         
