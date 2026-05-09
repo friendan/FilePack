@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <functional>
 #include <shellapi.h>
+#include <CommCtrl.h>
+#pragma comment(lib, "comctl32.lib")
 
 using namespace ezui;
 
@@ -58,7 +60,7 @@ public:
     void Init() {
         this->SetDockStyle(DockStyle::Fill);
         this->EventPassThrough = Event::OnMouseDoubleClick;
-        
+
         m_scrollBar.Parent = this;
         m_scrollBar.SetFixedWidth(14);
         m_scrollBar.OffsetCallback = [this](int offset) {
@@ -116,7 +118,7 @@ public:
         }
         
         if (m_contentLayout) {
-            m_contentLayout->EventPassThrough = Event::OnMouseDoubleClick;
+            m_contentLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
             m_contentLayout->EventHandler = [this](Control* sender, EventArgs& args) {
                 if (args.EventType == Event::OnMouseDoubleClick) {
                     MouseEventArgs& mouseArgs = (MouseEventArgs&)args;
@@ -130,9 +132,126 @@ public:
             };
         }
 
+        // 延迟安装窗口子类化处理右键消息（等 Hwnd() 可用后）
+        ezui::BeginInvoke([this]() {
+            HWND hWnd = Hwnd();
+            if (hWnd) {
+                SetWindowSubclass(hWnd, [](HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT {
+                    if (uMsg == WM_RBUTTONDOWN) {
+                        FileListView* self = (FileListView*)dwRefData;
+                        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                        auto r = self->GetRect();
+                        MouseEventArgs args(Event::OnMouseDown, Point(pt.x - r.X, pt.y - r.Y), MouseButton::Right);
+                        self->OnRightClick(args);
+                        return 0;
+                    }
+                    return DefSubclassProc(hW, uMsg, wParam, lParam);
+                }, (UINT_PTR)this, (DWORD_PTR)this);
+            }
+        });
+
         this->Invalidate();
     }
     
+    void SelectAllTodayFiles() {
+        auto now = std::chrono::system_clock::now();
+        auto now_t = std::chrono::system_clock::to_time_t(now);
+        tm today;
+        localtime_s(&today, &now_t);
+
+        for (size_t i = 0; i < m_files.size() && i < m_checkBoxs.size(); i++) {
+            auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                m_files[i].modifyTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+            std::time_t ft = std::chrono::system_clock::to_time_t(sctp);
+            tm file_tm;
+            localtime_s(&file_tm, &ft);
+
+            bool isToday = (file_tm.tm_year == today.tm_year &&
+                          file_tm.tm_mon == today.tm_mon &&
+                          file_tm.tm_mday == today.tm_mday);
+
+            CheckBox* cb = m_checkBoxs[i];
+            cb->SetCheck(isToday);
+            if (cb->CheckedChanged) {
+                cb->CheckedChanged(cb, isToday);
+            }
+        }
+    }
+
+    void SelectTopN(int n) {
+        int count = min(n, (int)min(m_files.size(), m_checkBoxs.size()));
+        for (int i = 0; i < count; i++) {
+            CheckBox* cb = m_checkBoxs[i];
+            cb->SetCheck(true);
+            if (cb->CheckedChanged) {
+                cb->CheckedChanged(cb, true);
+            }
+        }
+    }
+
+    void SelectNextN(int n) {
+        int lastSelected = -1;
+        for (int i = (int)m_checkBoxs.size() - 1; i >= 0; i--) {
+            if (m_checkBoxs[i]->GetCheck()) {
+                lastSelected = i;
+                break;
+            }
+        }
+
+        if (lastSelected < 0) {
+            SelectTopN(n);
+            return;
+        }
+
+        int start = lastSelected + 1;
+        int end = min(start + n, (int)min(m_files.size(), m_checkBoxs.size()));
+        for (int i = start; i < end; i++) {
+            CheckBox* cb = m_checkBoxs[i];
+            cb->SetCheck(true);
+            if (cb->CheckedChanged) {
+                cb->CheckedChanged(cb, true);
+            }
+        }
+    }
+
+    void OnRightClick(const MouseEventArgs& mouseArgs) {
+        // 获取点击的行索引
+        int relativeY = mouseArgs.Location.Y + m_scrollOffset;
+        int itemIndex = relativeY / m_itemHeight;
+
+        // 如果点击在文件行上，选中该行
+        if (itemIndex >= 0 && itemIndex < (int)m_checkBoxs.size()) {
+            CheckBox* cb = m_checkBoxs[itemIndex];
+            cb->SetCheck(true);
+            if (cb->CheckedChanged) {
+                cb->CheckedChanged(cb, true);
+            }
+        }
+
+        HMENU hMenu = CreatePopupMenu();
+        AppendMenuW(hMenu, MF_STRING, 1001, L"选中今天修改的文件");
+        AppendMenuW(hMenu, MF_STRING, 1002, L"选中前10行");
+        AppendMenuW(hMenu, MF_STRING, 1003, L"继续选10行");
+
+        POINT pt = { mouseArgs.Location.X, mouseArgs.Location.Y };
+        ClientToScreen(Hwnd(), &pt);
+
+        UINT cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, Hwnd(), NULL);
+        DestroyMenu(hMenu);
+
+        switch (cmd) {
+        case 1001:
+            SelectAllTodayFiles();
+            break;
+        case 1002:
+            SelectTopN(10);
+            break;
+        case 1003:
+            SelectNextN(10);
+            break;
+        }
+    }
+
     void LoadXmlLayout() {
         HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_FILELISTVIEW_LAYOUT), RT_HTML);
         if (!hRsrc) {
@@ -281,13 +400,13 @@ public:
                 // 超出列宽时显示省略号
                 pathLabel->SetElidedText(L"...");
                 
-                // 行内所有子控件穿透双击事件
-                indexLabel->EventPassThrough = Event::OnMouseDoubleClick;
-                timeLabel->EventPassThrough = Event::OnMouseDoubleClick;
-                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick;
-                pathLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                // 行内所有子控件穿透双击和右键事件
+                indexLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                timeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                pathLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
                 
-                itemLayout->EventPassThrough = Event::OnMouseDoubleClick;
+                itemLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
                 // 行双击事件：切换复选框
                 int cbIndex = i;
                 itemLayout->EventHandler = [this, cbIndex](Control* sender, EventArgs& args) {
