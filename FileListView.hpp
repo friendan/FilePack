@@ -219,7 +219,8 @@ public:
                 m_contentLayout->Add(itemLayout);
                 itemLayout->SetFixedHeight(m_itemHeight);
                 // 奇偶行不同颜色
-                itemLayout->Style.BackColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
+                Color originalBgColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
+                itemLayout->Style.BackColor = originalBgColor;
                 m_itemLayouts.push_back(itemLayout);
                 
 // 添加复选框
@@ -240,9 +241,11 @@ public:
                 cb->CheckedStyle.ForeColor = Color(0, 120, 212);
                 cb->SetText(L"");
                 cb->TextAlign = TextAlign::MiddleCenter;
-                // 勾选/取消时更新文字
-                cb->CheckedChanged = [cb](CheckBox* sender, bool checked) {
+                // 勾选/取消时更新文字，并改变行背景色
+                cb->CheckedChanged = [cb, itemLayout, originalBgColor](CheckBox* sender, bool checked) {
                     cb->SetText(checked ? L"\u2714" : L"");
+                    itemLayout->Style.BackColor = checked ? Color(220, 235, 255) : originalBgColor;
+                    cb->Invalidate();
                 };
                 m_checkBoxs.push_back(cb);
                 
