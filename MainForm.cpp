@@ -225,6 +225,7 @@ void MainForm::AddNewTab() {
     // 创建TAB标签容器（标题 + 关闭按钮）
     HLayout* tabContainer = new HLayout(tabBar);
     tabContainer->SetFixedHeight(30);
+    tabContainer->SetFixedWidth(150);
     tabContainer->Style.BackColor = Color(230, 230, 230);
     tabContainer->Margin.Left = 2;
     tabContainer->Margin.Right = 2;
@@ -232,10 +233,10 @@ void MainForm::AddNewTab() {
     Label* titleLabel = new Label(tabContainer);
     tabContainer->Add(titleLabel);
     titleLabel->SetText(tabTitle.c_str());
-    titleLabel->SetAutoSize(true);
-    titleLabel->TextAlign = TextAlign::MiddleCenter;
+    titleLabel->SetFixedWidth(120);
+    titleLabel->TextAlign = TextAlign::MiddleLeft;
     titleLabel->Margin.Left = 8;
-    titleLabel->Margin.Right = 4;
+    titleLabel->Margin.Right = 2;
     
     Button* closeBtn = new Button(tabContainer);
     tabContainer->Add(closeBtn);
