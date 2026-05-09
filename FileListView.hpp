@@ -215,19 +215,6 @@ public:
     }
 
     void OnRightClick(const MouseEventArgs& mouseArgs) {
-        // 获取点击的行索引
-        int relativeY = mouseArgs.Location.Y + m_scrollOffset;
-        int itemIndex = relativeY / m_itemHeight;
-
-        // 如果点击在文件行上，选中该行
-        if (itemIndex >= 0 && itemIndex < (int)m_checkBoxs.size()) {
-            CheckBox* cb = m_checkBoxs[itemIndex];
-            cb->SetCheck(true);
-            if (cb->CheckedChanged) {
-                cb->CheckedChanged(cb, true);
-            }
-        }
-
         HMENU hMenu = CreatePopupMenu();
         AppendMenuW(hMenu, MF_STRING, 1001, L"选中今天修改的文件");
         AppendMenuW(hMenu, MF_STRING, 1002, L"选中前10行");
