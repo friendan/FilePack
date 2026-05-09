@@ -262,26 +262,27 @@ public:
                 indexLabel->SetFixedWidth(40);
                 indexLabel->TextAlign = TextAlign::MiddleCenter;
                 
-                Label* pathLabel = new Label(itemLayout);
-                itemLayout->Add(pathLabel);
-                pathLabel->SetText(file.fullPath.c_str());
-                pathLabel->SetFixedWidth(480);
+                Label* timeLabel = new Label(itemLayout);
+                itemLayout->Add(timeLabel);
+                timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
+                timeLabel->SetFixedWidth(150);
                 
                 Label* sizeLabel = new Label(itemLayout);
                 itemLayout->Add(sizeLabel);
                 sizeLabel->SetText(AppUtil::FormatFileSize(file.fileSize).c_str());
                 sizeLabel->SetFixedWidth(100);
                 
-                Label* timeLabel = new Label(itemLayout);
-                itemLayout->Add(timeLabel);
-                timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
-                timeLabel->SetFixedWidth(150);
+                Label* pathLabel = new Label(itemLayout);
+                itemLayout->Add(pathLabel);
+                pathLabel->SetText(file.fullPath.c_str());
+                // 文件路径列自动占满剩余宽度
+                pathLabel->SetRateWidth(1.0f);
                 
                 // 行内所有子控件穿透双击事件
                 indexLabel->EventPassThrough = Event::OnMouseDoubleClick;
-                pathLabel->EventPassThrough = Event::OnMouseDoubleClick;
-                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick;
                 timeLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick;
+                pathLabel->EventPassThrough = Event::OnMouseDoubleClick;
                 
                 itemLayout->EventPassThrough = Event::OnMouseDoubleClick;
                 // 行双击事件：切换复选框
