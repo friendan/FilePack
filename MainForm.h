@@ -35,9 +35,11 @@ private:
     TabLayout* mainTabs = nullptr;
     HLayout* tabBar = nullptr;
     int tabCount = 1;
-    std::vector<Button*> tabButtons;
+    std::vector<Control*> tabButtons;
+    std::vector<Control*> m_tabPages;
     FileListView* currentFileListView = nullptr;
     int m_currentTabIndex = 0;
+    int m_newTabStartIndex = 0;
 
 public:
     MainForm(int width, int height);

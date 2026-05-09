@@ -95,6 +95,7 @@ void MainForm::Init() {
     if (btnTabLog) {
         tabButtons.push_back(btnTabLog);
         UpdateTabButtonStates(0);
+        m_newTabStartIndex = 1;
         btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
                 auto startTime = std::chrono::high_resolution_clock::now();
@@ -215,43 +216,102 @@ void MainForm::AddNewTab() {
     
     AddLog(L"Tab added to TabLayout");
     
+    m_tabPages.push_back(tabPage);
+
     this->Refresh();
     
-    Button* newTabBtn = new Button(tabBar);
-    newTabBtn->SetText(tabTitle.c_str());
-    newTabBtn->SetFixedWidth(100);
-    newTabBtn->Margin.Left = 2;
-    newTabBtn->Margin.Right = 2;
+    int newTabIndex = (int)m_tabPages.size();
     
-    int newTabIndex = mainTabs->GetControls().size() - 1;
-    newTabBtn->EventHandler = [this, newTabIndex, tabTitle](Control* sender, EventArgs& args) {
+    // 创建TAB标签容器（标题 + 关闭按钮）
+    HLayout* tabContainer = new HLayout(tabBar);
+    tabContainer->SetFixedHeight(30);
+    tabContainer->Style.BackColor = Color(230, 230, 230);
+    tabContainer->Margin.Left = 2;
+    tabContainer->Margin.Right = 2;
+    
+    Label* titleLabel = new Label(tabContainer);
+    tabContainer->Add(titleLabel);
+    titleLabel->SetText(tabTitle.c_str());
+    titleLabel->SetAutoSize(true);
+    titleLabel->TextAlign = TextAlign::MiddleCenter;
+    titleLabel->Margin.Left = 8;
+    titleLabel->Margin.Right = 4;
+    
+    Button* closeBtn = new Button(tabContainer);
+    tabContainer->Add(closeBtn);
+    closeBtn->SetText(L"x");
+    closeBtn->SetFixedWidth(18);
+    closeBtn->SetFixedHeight(18);
+    closeBtn->Style.BackColor = Color(0, 0, 0, 0);
+    closeBtn->Style.ForeColor = Color(100, 100, 100);
+    closeBtn->Style.FontSize = 12;
+    closeBtn->Margin.Right = 4;
+    closeBtn->Style.Border = 0;
+    
+    // 关闭按钮事件：延迟删除控件，避免事件处理中自身被销毁
+    closeBtn->EventHandler = [this, tabContainer](Control* sender, EventArgs& args) {
         if (args.EventType == Event::OnMouseDown) {
-            auto startTime = std::chrono::high_resolution_clock::now();
-            AddLog(L"[PERF] Switching to tab: " + tabTitle);
+            // 查找索引
+            int btnIndex = -1;
+            for (size_t i = m_newTabStartIndex; i < tabButtons.size(); i++) {
+                if (tabButtons[i] == tabContainer) {
+                    btnIndex = (int)i;
+                    break;
+                }
+            }
+            if (btnIndex < 0) return;
             
-            mainTabs->SetPageIndex(newTabIndex);
-            UpdateTabButtonStates(newTabIndex);
+            int pageIndex = btnIndex - m_newTabStartIndex;
+            Control* page = (pageIndex < (int)m_tabPages.size()) ? m_tabPages[pageIndex] : nullptr;
+            int switchTo = (btnIndex - 1 >= 0) ? btnIndex - 1 : 0;
             
-            auto endTime = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-            AddLog(L"[PERF] SetPageIndex took: " + std::to_wstring(duration) + L"ms");
+            AddLog(L"Closing tab index: " + std::to_wstring(btnIndex));
             
-            this->Invalidate();
+            // 先移除 vector 数据
+            tabButtons.erase(tabButtons.begin() + btnIndex);
+            if (page) {
+                m_tabPages.erase(m_tabPages.begin() + pageIndex);
+            }
             
-            auto endTime2 = std::chrono::high_resolution_clock::now();
-            auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(endTime2 - startTime).count();
-            AddLog(L"[PERF] Total switch time: " + std::to_wstring(duration2) + L"ms");
+            // 延迟到事件处理完成后再删除控件
+            ezui::BeginInvoke([this, tabContainer, page, switchTo]() {
+                tabBar->Remove(tabContainer, true);
+                if (page) {
+                    mainTabs->Remove(page, true);
+                }
+                mainTabs->SetPageIndex(switchTo);
+                UpdateTabButtonStates(switchTo);
+                this->Invalidate();
+            });
         }
     };
     
-    // 插入到 btnAddTab 之前（加号按钮始终在最后一个）
+    // 点击标题文字切换到该 TAB
+    titleLabel->EventHandler = [this, tabContainer](Control* sender, EventArgs& args) {
+        if (args.EventType == Event::OnMouseDown) {
+            int btnIndex = -1;
+            for (size_t i = m_newTabStartIndex; i < tabButtons.size(); i++) {
+                if (tabButtons[i] == tabContainer) {
+                    btnIndex = (int)i;
+                    break;
+                }
+            }
+            if (btnIndex >= 0) {
+                mainTabs->SetPageIndex(btnIndex);
+                UpdateTabButtonStates(btnIndex);
+                this->Invalidate();
+            }
+        }
+    };
+    
+    // 插入到 btnAddTab 之前
     int addBtnIndex = tabBar->IndexOf(btnAddTab);
     if (addBtnIndex >= 0) {
-        tabBar->Insert(addBtnIndex, newTabBtn);
+        tabBar->Insert(addBtnIndex, tabContainer);
     } else {
-        tabBar->Add(newTabBtn);
+        tabBar->Add(tabContainer);
     }
-    tabButtons.push_back(newTabBtn);
+    tabButtons.push_back(tabContainer);
     
     UpdateTabButtonStates(newTabIndex);
     
