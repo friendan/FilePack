@@ -99,10 +99,24 @@ public:
                     if (uMsg == WM_RBUTTONDOWN) {
                         FileListView* self = (FileListView*)dwRefData;
                         POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-                        auto r = self->GetRect();
-                        MouseEventArgs args(Event::OnMouseDown, Point(pt.x - r.X, pt.y - r.Y), MouseButton::Right);
-                        self->OnRightClick(args);
-                        return 0;
+                        // 遍历父控件链，计算 FileListView 在窗口客户区的位置
+                        int absX = 0, absY = 0;
+                        Control* c = self;
+                        while (c) {
+                            auto r = c->GetRect();
+                            absX += r.X;
+                            absY += r.Y;
+                            c = c->Parent;
+                            if (c && c->IsWindow()) break;
+                        }
+                        // 只响应 FileListView 自身区域内的右键
+                        auto sr = self->GetRect();
+                        if (pt.x >= absX && pt.x < absX + self->Width() &&
+                            pt.y >= absY && pt.y < absY + self->Height()) {
+                            MouseEventArgs args(Event::OnMouseDown, Point(pt.x - absX, pt.y - absY), MouseButton::Right);
+                            self->OnRightClick(args);
+                            return 0;
+                        }
                     }
                     return DefSubclassProc(hW, uMsg, wParam, lParam);
                 }, (UINT_PTR)this, (DWORD_PTR)this);
@@ -327,6 +341,8 @@ public:
                     itemLayout->Style.BackColor = checked ? Color(220, 235, 255) : originalBgColor;
                     cb->Invalidate();
                 };
+                // 复选框穿透右键事件，让 FileListView 处理
+                cb->EventPassThrough = Event::OnMouseDown;
                 m_checkBoxs.push_back(cb);
                 
                 if (OnLog) OnLog(L"[FileListView] CheckBox added for row " + std::to_wstring(i));
