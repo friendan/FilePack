@@ -278,6 +278,8 @@ public:
                 pathLabel->TextAlign = TextAlign::MiddleLeft;
                 // 文件路径列自动占满剩余宽度
                 pathLabel->SetRateWidth(1.0f);
+                // 超出列宽时显示省略号
+                pathLabel->SetElidedText(L"...");
                 
                 // 行内所有子控件穿透双击事件
                 indexLabel->EventPassThrough = Event::OnMouseDoubleClick;
