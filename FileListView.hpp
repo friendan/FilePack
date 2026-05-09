@@ -74,48 +74,7 @@ public:
         m_headerLayout = (HLayout*)this->FindControl("header");
         m_contentLayout = (VLayout*)this->FindControl("content");
         
-        // 表头复选框功能：全选/取消全选当前可见文件
-        CheckBox* headerCheckBox = (CheckBox*)this->FindControl("header")->GetControls()[0];
-        if (headerCheckBox) {
-            // 设置复选框样式：未选中时显示带灰色边框的白色方块
-            headerCheckBox->Style.Border = 1;
-            headerCheckBox->Style.Border.Color = Color(120, 120, 120);
-            headerCheckBox->Style.Border.Style = StrokeStyle::Solid;
-            headerCheckBox->Style.BackColor = Color(255, 255, 255);
-            // 选中时：边框变为主题色，显示 ✔ 标记
-            headerCheckBox->CheckedStyle.Border = 1;
-            headerCheckBox->CheckedStyle.Border.Color = Color(0, 120, 212);
-            headerCheckBox->CheckedStyle.Border.Style = StrokeStyle::Solid;
-            headerCheckBox->CheckedStyle.BackColor = Color(255, 255, 255);
-            headerCheckBox->CheckedStyle.ForeColor = Color(0, 120, 212);
-            headerCheckBox->SetText(L"");
-            headerCheckBox->TextAlign = TextAlign::MiddleCenter;
-            
-            headerCheckBox->CheckedChanged = [this, headerCheckBox](CheckBox* sender, bool checked) {
-                // 更新表头复选框文字显示状态
-                headerCheckBox->SetText(checked ? L"\u2714" : L"");
-                // 只处理当前可见的文件行
-                int firstVisible = 0;
-                int lastVisible = (int)m_checkBoxs.size() - 1;
-                
-                // 计算可见范围（根据滚动偏移）
-                if (m_scrollOffset < 0) {
-                    firstVisible = (-m_scrollOffset) / m_itemHeight;
-                }
-                int visibleCount = Height() / m_itemHeight;
-                lastVisible = min(lastVisible, firstVisible + visibleCount);
-                
-                for (int i = firstVisible; i <= lastVisible && i < (int)m_checkBoxs.size(); i++) {
-                    if (m_checkBoxs[i]) {
-                        m_checkBoxs[i]->SetCheck(checked);
-                    }
-                }
-                
-                if (OnLog) {
-                    OnLog(L"[FileListView] " + std::wstring(checked ? L"全选" : L"取消全选") + L"可见文件");
-                }
-            };
-        }
+        // 表头复选框已删除
         
         if (m_contentLayout) {
             m_contentLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
