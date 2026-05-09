@@ -232,6 +232,8 @@ public:
         AppendMenuW(hMenu, MF_STRING, 1001, L"选中今天修改的文件");
         AppendMenuW(hMenu, MF_STRING, 1002, L"选中前10行");
         AppendMenuW(hMenu, MF_STRING, 1003, L"继续选10行");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hMenu, MF_STRING, 1004, L"取消选中所有行");
 
         POINT pt = { mouseArgs.Location.X, mouseArgs.Location.Y };
         ClientToScreen(Hwnd(), &pt);
@@ -248,6 +250,14 @@ public:
             break;
         case 1003:
             SelectNextN(10);
+            break;
+        case 1004:
+            for (auto* cb : m_checkBoxs) {
+                cb->SetCheck(false);
+                if (cb->CheckedChanged) {
+                    cb->CheckedChanged(cb, false);
+                }
+            }
             break;
         }
     }
