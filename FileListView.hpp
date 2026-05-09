@@ -275,6 +275,7 @@ public:
                 Label* pathLabel = new Label(itemLayout);
                 itemLayout->Add(pathLabel);
                 pathLabel->SetText(file.fullPath.c_str());
+                pathLabel->TextAlign = TextAlign::MiddleLeft;
                 // 文件路径列自动占满剩余宽度
                 pathLabel->SetRateWidth(1.0f);
                 
