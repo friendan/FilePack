@@ -31,6 +31,42 @@ if(NOT TARGET ZLIB::ZLIB)
 endif()
 add_subdirectory(libarchive/libarchive-3.8.7)
 
+# ======== LZMA SDK 静态库 ========
+file(GLOB LZMA_SOURCES
+    "7z/lzma2601/C/7z*.c"
+    "7z/lzma2601/C/Aes*.c"
+    "7z/lzma2601/C/Alloc.c"
+    "7z/lzma2601/C/Bcj2*.c"
+    "7z/lzma2601/C/Bra*.c"
+    "7z/lzma2601/C/CpuArch.c"
+    "7z/lzma2601/C/Delta.c"
+    "7z/lzma2601/C/LzFind*.c"
+    "7z/lzma2601/C/Lzma*.c"
+    "7z/lzma2601/C/Lzma2*.c"
+    "7z/lzma2601/C/Lzma86*.c"
+    "7z/lzma2601/C/LzmaLib.c"
+    "7z/lzma2601/C/MtCoder.c"
+    "7z/lzma2601/C/MtDec.c"
+    "7z/lzma2601/C/Ppmd7*.c"
+    "7z/lzma2601/C/Sha256*.c"
+    "7z/lzma2601/C/Sort.c"
+    "7z/lzma2601/C/Threads.c"
+    "7z/lzma2601/C/Xz*.c"
+)
+include_directories(7z/lzma2601/C)
+
+add_library(lzma_sdk STATIC ${LZMA_SOURCES})
+target_compile_definitions(lzma_sdk PRIVATE
+    _CRT_SECURE_NO_WARNINGS
+    _CRT_NONSTDC_NO_DEPRECATE
+)
+target_include_directories(lzma_sdk PUBLIC 7z/lzma2601/C)
+
+# 与主工程相同的 CRT 链接方式
+set_target_properties(lzma_sdk PROPERTIES
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+)
+
 # 添加项目源文件
 set(PROJECT_SOURCES
     main.cpp
@@ -49,6 +85,7 @@ add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES} ${EZUI_SOURCES} ${RESOUR
 target_link_libraries(${PROJECT_NAME} PRIVATE
     archive_static
     zlibstatic
+    lzma_sdk
     user32
     gdi32
     comctl32
