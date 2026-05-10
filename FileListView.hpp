@@ -237,15 +237,12 @@ public:
     }
     
     void PackSelectedFiles() {
-        // 收集选中的文件
-        std::vector<std::wstring> selectedFiles;
+        // 统计选中的文件
+        int totalSelected = 0;
         for (size_t i = 0; i < m_checkBoxs.size() && i < m_files.size(); i++) {
-            if (m_checkBoxs[i]->GetCheck()) {
-                selectedFiles.push_back(m_files[i].fullPath);
-            }
+            if (m_checkBoxs[i]->GetCheck()) totalSelected++;
         }
-        
-        if (selectedFiles.empty()) {
+        if (totalSelected == 0) {
             if (OnLog) OnLog(L"[Pack] No files selected");
             return;
         }
@@ -264,7 +261,7 @@ public:
         std::wstring outputPath = packDir + L"\\" + fileName;
         
         if (OnLog) OnLog(L"[Pack] Creating: " + outputPath);
-        if (OnLog) OnLog(L"[Pack] Files: " + std::to_wstring(selectedFiles.size()));
+        if (OnLog) OnLog(L"[Pack] Files: " + std::to_wstring(totalSelected));
         
         struct archive* a = archive_write_new();
         archive_write_add_filter_gzip(a);
@@ -278,7 +275,9 @@ public:
         }
         
         int packedCount = 0;
-        for (const auto& filePath : selectedFiles) {
+        for (size_t fi = 0; fi < m_files.size() && fi < m_checkBoxs.size(); fi++) {
+            if (!m_checkBoxs[fi]->GetCheck()) continue;
+            const auto& filePath = m_files[fi].fullPath;
             // 计算相对路径（去掉文件夹路径前缀）
             std::wstring relativePath = filePath;
             if (relativePath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
@@ -303,6 +302,11 @@ public:
             archive_entry_set_size(entry, fileSize);
             archive_entry_set_filetype(entry, AE_IFREG);
             archive_entry_set_perm(entry, 0644);
+            // 保留文件修改时间
+            auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                m_files[fi].modifyTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+            time_t mtime = std::chrono::system_clock::to_time_t(sctp);
+            archive_entry_set_mtime(entry, mtime, 0);
             
             r = archive_write_header(a, entry);
             if (r != ARCHIVE_OK) {
