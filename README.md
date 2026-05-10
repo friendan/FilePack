@@ -34,6 +34,19 @@ cmd
 -scc 是 “仅弹窗、不预设压缩包名”，适合临时压缩。
 要预设名称 + 多文件 + 弹窗确认，必须用 a -ad
 
+7-Zip 可以直接打包成标准 tar.gz（Linux 常用格式）
+7z a -ttar -tgz 输出.tar.gz 要打包的文件/文件夹
+7z a -ttar -tgz "D:\output\test.tar.gz" "D:\mydir"
+-ttar：打包为 tar 容器
+-tgz：再用 gzip 压缩
+7z 还支持：
+tar.bz2
+tar.xz
+tar.zst
+都是 Linux 常用格式，命令行换参数就行
+
+
+
 
 
 
