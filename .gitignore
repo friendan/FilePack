@@ -85,3 +85,5 @@ bin/Debug/*.pdb
 
 
 
+/bin/Debug/FilePack.exp
+/nul
