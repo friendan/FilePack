@@ -14,6 +14,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include "PathUtil.hpp"
+#include "Lzma2Enc.h"
+#include "Alloc.h"
 #pragma comment(lib, "comctl32.lib")
 
 using namespace ezui;
@@ -209,6 +211,7 @@ public:
         AppendMenuW(hMenu, MF_STRING, 1004, L"取消选中所有行");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hMenu, MF_STRING, 1005, L"打包选中文件为 tar.gz");
+        AppendMenuW(hMenu, MF_STRING, 1006, L"打包选中文件为 7z (LZMA2)");
 
         POINT pt = { mouseArgs.Location.X, mouseArgs.Location.Y };
         ClientToScreen(Hwnd(), &pt);
@@ -236,6 +239,9 @@ public:
             break;
         case 1005:
             PackSelectedFiles();
+            break;
+        case 1006:
+            PackSelectedFiles7z();
             break;
         }
     }
@@ -347,6 +353,122 @@ public:
         archive_write_free(a);
         
         if (OnLog) OnLog(L"[Pack] Done! Packed " + std::to_wstring(packedCount) + L" files to: " + outputPath);
+    }
+
+    void PackSelectedFiles7z() {
+        // 统计选中的文件
+        int totalSelected = 0;
+        size_t totalSize = 0;
+        for (size_t i = 0; i < m_checkBoxs.size() && i < m_files.size(); i++) {
+            if (m_checkBoxs[i]->GetCheck()) totalSelected++;
+        }
+        if (totalSelected == 0) {
+            if (OnLog) OnLog(L"[7z] No files selected");
+            return;
+        }
+        
+        // 生成文件名：年月日_时分秒.7z
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        wchar_t fileName[64];
+        swprintf_s(fileName, L"%04d%02d%02d_%02d%02d%02d.7z",
+            st.wYear, st.wMonth, st.wDay,
+            st.wHour, st.wMinute, st.wSecond);
+        
+        // 生成路径：exe所在目录\pack\文件名
+        std::wstring packDir = PathUtil::GetExeDir() + L"\\pack";
+        PathUtil::EnsureDirExists(packDir);
+        std::wstring outputPath = packDir + L"\\" + fileName;
+        
+        if (OnLog) OnLog(L"[7z] Creating: " + outputPath);
+        if (OnLog) OnLog(L"[7z] Files: " + std::to_wstring(totalSelected));
+        
+        // 用 libarchive 生成标准 7z 文件
+        struct archive* a = archive_write_new();
+        archive_write_set_format_7zip(a);
+        
+        int r = archive_write_open_filename(a, AppUtil::WStrToStr(outputPath).c_str());
+        if (r != ARCHIVE_OK) {
+            if (OnLog) OnLog(L"[7z] Failed to open: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
+            archive_write_free(a);
+            return;
+        }
+        
+        int packedCount = 0;
+        for (size_t fi = 0; fi < m_files.size() && fi < m_checkBoxs.size(); fi++) {
+            if (!m_checkBoxs[fi]->GetCheck()) continue;
+            const auto& filePath = m_files[fi].fullPath;
+            
+            // 计算相对路径：文件夹名/文件相对路径
+            std::wstring folderName = m_folderPath;
+            size_t pos = folderName.find_last_of(L"\\/");
+            if (pos != std::wstring::npos) {
+                folderName = folderName.substr(pos + 1);
+            }
+            std::wstring relativePath = filePath;
+            if (relativePath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
+                if (relativePath.length() > m_folderPath.length() + 1) {
+                    relativePath = relativePath.substr(m_folderPath.length() + 1);
+                } else {
+                    relativePath = L"";
+                }
+            }
+            if (!relativePath.empty()) {
+                relativePath = folderName + L"/" + relativePath;
+            } else {
+                relativePath = folderName;
+            }
+            
+            // 读取文件内容
+            FILE* f = nullptr;
+            if (_wfopen_s(&f, filePath.c_str(), L"rb") != 0 || !f) {
+                if (OnLog) OnLog(L"[7z] Cannot open: " + filePath);
+                continue;
+            }
+            
+            _fseeki64(f, 0, SEEK_END);
+            int64_t fileSize = _ftelli64(f);
+            _fseeki64(f, 0, SEEK_SET);
+            
+            struct archive_entry* entry = archive_entry_new();
+            archive_entry_set_pathname(entry, AppUtil::WStrToStr(relativePath).c_str());
+            archive_entry_set_size(entry, fileSize);
+            archive_entry_set_filetype(entry, AE_IFREG);
+            archive_entry_set_perm(entry, 0644);
+            // 保留文件修改时间
+            auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                m_files[fi].modifyTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+            time_t mtime = std::chrono::system_clock::to_time_t(sctp);
+            archive_entry_set_mtime(entry, mtime, 0);
+            
+            r = archive_write_header(a, entry);
+            if (r != ARCHIVE_OK) {
+                if (OnLog) OnLog(L"[7z] Header error: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
+                archive_entry_free(entry);
+                fclose(f);
+                continue;
+            }
+            
+            char buf[65536];
+            size_t bytesRead;
+            while ((bytesRead = fread(buf, 1, sizeof(buf), f)) > 0) {
+                archive_write_data(a, buf, bytesRead);
+            }
+            
+            archive_entry_free(entry);
+            fclose(f);
+            packedCount++;
+        }
+        
+        archive_write_close(a);
+        archive_write_free(a);
+        
+        if (packedCount == 0) {
+            DeleteFileW(outputPath.c_str());
+            if (OnLog) OnLog(L"[7z] Failed - no files packed");
+        } else {
+            if (OnLog) OnLog(L"[7z] Done! Packed " + std::to_wstring(packedCount) + L" files to: " + outputPath);
+        }
     }
 
     void LoadXmlLayout() {
