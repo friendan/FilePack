@@ -393,14 +393,38 @@ public:
             if (OnLog) OnLog(L"[7z] Using: " + sevenZExe);
         }
         
-        // 构建命令行
-        // 7zG.exe a -ad -mx5 -t7z "输出路径" "文件1" "文件2" ...
+        // 计算工作目录（m_folderPath 的父目录）和文件夹名
+        std::wstring parentDir = m_folderPath;
+        std::wstring folderName = m_folderPath;
+        size_t pos = folderName.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            folderName = folderName.substr(pos + 1);
+            parentDir = parentDir.substr(0, pos);
+        }
+        
+        // 构建命令行（使用相对路径）
+        // 7zG.exe a -ad -mx5 -t7z "输出路径" "文件夹名\相对路径" ...
         std::wstring cmdLine = L"\"" + sevenZExe + L"\" a -ad -mx5 -t7z \"" + outputPath + L"\"";
         for (const auto& f : fileList) {
-            cmdLine += L" \"" + f + L"\"";
+            // 计算相对路径：文件夹名\剩下的路径
+            std::wstring relPath = f;
+            if (relPath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
+                if (relPath.length() > m_folderPath.length() + 1) {
+                    relPath = relPath.substr(m_folderPath.length() + 1);
+                } else {
+                    relPath = L"";
+                }
+            }
+            if (!relPath.empty()) {
+                relPath = folderName + L"\\" + relPath;
+            } else {
+                relPath = folderName;
+            }
+            cmdLine += L" \"" + relPath + L"\"";
         }
         
         if (OnLog) OnLog(L"[7z] Running: " + cmdLine);
+        if (OnLog) OnLog(L"[7z] WorkDir: " + parentDir);
         
         // 启动 7zG.exe（显示窗口，不等待）
         STARTUPINFOW si = { sizeof(si) };
@@ -412,7 +436,7 @@ public:
         std::vector<wchar_t> cmdBuf(cmdLine.c_str(), cmdLine.c_str() + cmdLine.size() + 1);
         
         BOOL ok = CreateProcessW(NULL, cmdBuf.data(), NULL, NULL, FALSE,
-            0, NULL, NULL, &si, &pi);
+            0, NULL, parentDir.c_str(), &si, &pi);
         
         if (!ok) {
             if (OnLog) OnLog(L"[7z] Failed to launch 7zG.exe");
