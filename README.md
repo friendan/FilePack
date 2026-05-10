@@ -46,7 +46,10 @@ tar.zst
 都是 Linux 常用格式，命令行换参数就行
 
 
-
+7z.exe a -ttar "D:\test.tar" "D:\Debug\11.log"
+7z.exe a -tgzip "D:\test.tar.gz" "D:\test.tar"
+del "D:\test.tar"
+pause
 
 
 
