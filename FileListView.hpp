@@ -11,6 +11,9 @@
 #include <functional>
 #include <shellapi.h>
 #include <CommCtrl.h>
+#include <archive.h>
+#include <archive_entry.h>
+#include "PathUtil.hpp"
 #pragma comment(lib, "comctl32.lib")
 
 using namespace ezui;
@@ -200,6 +203,8 @@ public:
         AppendMenuW(hMenu, MF_STRING, 1003, L"继续选10行");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hMenu, MF_STRING, 1004, L"取消选中所有行");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hMenu, MF_STRING, 1005, L"打包选中文件为 tar.gz");
 
         POINT pt = { mouseArgs.Location.X, mouseArgs.Location.Y };
         ClientToScreen(Hwnd(), &pt);
@@ -225,7 +230,103 @@ public:
                 }
             }
             break;
+        case 1005:
+            PackSelectedFiles();
+            break;
         }
+    }
+    
+    void PackSelectedFiles() {
+        // 收集选中的文件
+        std::vector<std::wstring> selectedFiles;
+        for (size_t i = 0; i < m_checkBoxs.size() && i < m_files.size(); i++) {
+            if (m_checkBoxs[i]->GetCheck()) {
+                selectedFiles.push_back(m_files[i].fullPath);
+            }
+        }
+        
+        if (selectedFiles.empty()) {
+            if (OnLog) OnLog(L"[Pack] No files selected");
+            return;
+        }
+        
+        // 生成文件名：年月日_时分秒.tar.gz
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        wchar_t fileName[64];
+        swprintf_s(fileName, L"%04d%02d%02d_%02d%02d%02d.tar.gz",
+            st.wYear, st.wMonth, st.wDay,
+            st.wHour, st.wMinute, st.wSecond);
+        
+        // 生成路径：exe所在目录\pack\文件名
+        std::wstring packDir = PathUtil::GetExeDir() + L"\\pack";
+        PathUtil::EnsureDirExists(packDir);
+        std::wstring outputPath = packDir + L"\\" + fileName;
+        
+        if (OnLog) OnLog(L"[Pack] Creating: " + outputPath);
+        if (OnLog) OnLog(L"[Pack] Files: " + std::to_wstring(selectedFiles.size()));
+        
+        struct archive* a = archive_write_new();
+        archive_write_add_filter_gzip(a);
+        archive_write_set_format_pax(a);
+        
+        int r = archive_write_open_filename(a, AppUtil::WStrToStr(outputPath).c_str());
+        if (r != ARCHIVE_OK) {
+            if (OnLog) OnLog(L"[Pack] Failed to open: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
+            archive_write_free(a);
+            return;
+        }
+        
+        int packedCount = 0;
+        for (const auto& filePath : selectedFiles) {
+            // 计算相对路径（去掉文件夹路径前缀）
+            std::wstring relativePath = filePath;
+            if (relativePath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
+                if (relativePath.length() > m_folderPath.length() + 1) {
+                    relativePath = relativePath.substr(m_folderPath.length() + 1);
+                }
+            }
+            
+            // 读取文件内容
+            FILE* f = nullptr;
+            if (_wfopen_s(&f, filePath.c_str(), L"rb") != 0 || !f) {
+                if (OnLog) OnLog(L"[Pack] Cannot open: " + filePath);
+                continue;
+            }
+            
+            _fseeki64(f, 0, SEEK_END);
+            int64_t fileSize = _ftelli64(f);
+            _fseeki64(f, 0, SEEK_SET);
+            
+            struct archive_entry* entry = archive_entry_new();
+            archive_entry_set_pathname(entry, AppUtil::WStrToStr(relativePath).c_str());
+            archive_entry_set_size(entry, fileSize);
+            archive_entry_set_filetype(entry, AE_IFREG);
+            archive_entry_set_perm(entry, 0644);
+            
+            r = archive_write_header(a, entry);
+            if (r != ARCHIVE_OK) {
+                if (OnLog) OnLog(L"[Pack] Header error: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
+                archive_entry_free(entry);
+                fclose(f);
+                continue;
+            }
+            
+            char buf[65536];
+            size_t bytesRead;
+            while ((bytesRead = fread(buf, 1, sizeof(buf), f)) > 0) {
+                archive_write_data(a, buf, bytesRead);
+            }
+            
+            archive_entry_free(entry);
+            fclose(f);
+            packedCount++;
+        }
+        
+        archive_write_close(a);
+        archive_write_free(a);
+        
+        if (OnLog) OnLog(L"[Pack] Done! Packed " + std::to_wstring(packedCount) + L" files to: " + outputPath);
     }
 
     void LoadXmlLayout() {
