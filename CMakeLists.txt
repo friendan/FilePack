@@ -17,6 +17,13 @@ add_definitions(-DUNICODE -D_UNICODE) # 设置UNICODE字符集
 include_directories(ezui/include/EzUI) # 包含ezui头文件目录
 file(GLOB EZUI_SOURCES "ezui/sources/*.cpp") # 收集ezui源文件
 
+# ======== zlib 静态库 ========
+set(ZLIB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(ZLIB_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
+set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+add_subdirectory(zlib/zlib-1.3.2)
+
 # 添加项目源文件
 set(PROJECT_SOURCES
     main.cpp
@@ -33,6 +40,7 @@ set(PROJECT_SOURCES
 
 add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES} ${EZUI_SOURCES} ${RESOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    zlibstatic
     user32
     gdi32
     comctl32
@@ -51,15 +59,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # 确保资源文件依赖关系
-set_property(SOURCE App.rc PROPERTY OBJECT_DEPENDS 
+set_property(SOURCE App.rc PROPERTY OBJECT_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/Main.htm
     ${CMAKE_CURRENT_SOURCE_DIR}/FileListView.htm
 )
-
-
-
-
-
-
-
-
