@@ -43,25 +43,6 @@ void MainForm::Init() {
     mainTabs = (TabLayout*)this->FindControl("mainTabs");
     tabBar = (HLayout*)this->FindControl("tabBar");
     
-    Button* btnSelectFolder = (Button*)this->FindControl("btnSelectFolder");
-    if (btnSelectFolder) {
-        AddLog(L"btnSelectFolder found and event handler set");
-        btnSelectFolder->EventHandler = [this](Control* sender, EventArgs& args) {
-            if (args.EventType == Event::OnMouseDown) {
-                AddLog(L"Select folder button clicked");
-                AddLog(currentFileListView ? L"currentFileListView is: NOT NULL" : L"currentFileListView is: NULL");
-                if (currentFileListView) {
-                    AddLog(L"Calling SelectFolderAndLoad...");
-                    SelectFolderAndLoad(currentFileListView);
-                } else {
-                    AddLog(L"No file list view available");
-                }
-            }
-        };
-    } else {
-        AddLog(L"btnSelectFolder not found!");
-    }
-    
     Control* logTabPage = new Control(mainTabs);
     logTabPage->Name = L"logTabPage";
     logTabPage->SetDockStyle(DockStyle::Fill);
