@@ -24,6 +24,12 @@ set(ZLIB_INSTALL OFF CACHE BOOL "" FORCE)
 set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 add_subdirectory(zlib/zlib-1.3.2)
 
+# ======== libarchive 静态库 ========
+if(NOT TARGET ZLIB::ZLIB)
+    add_library(ZLIB::ZLIB ALIAS zlibstatic)
+endif()
+add_subdirectory(libarchive/libarchive-3.8.7)
+
 # 添加项目源文件
 set(PROJECT_SOURCES
     main.cpp
@@ -40,6 +46,7 @@ set(PROJECT_SOURCES
 
 add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES} ${EZUI_SOURCES} ${RESOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    archive_static
     zlibstatic
     user32
     gdi32
