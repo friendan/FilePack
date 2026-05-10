@@ -472,8 +472,6 @@ public:
                 cb->EventPassThrough = Event::OnMouseDown;
                 m_checkBoxs.push_back(cb);
                 
-                if (OnLog) OnLog(L"[FileListView] CheckBox added for row " + std::to_wstring(i));
-                
                 Label* indexLabel = new Label(itemLayout);
                 itemLayout->Add(indexLabel);
                 indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
