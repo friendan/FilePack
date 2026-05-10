@@ -219,6 +219,16 @@ void MainForm::AddNewTab() {
     titleLabel->Margin.Left = 8;
     titleLabel->Margin.Right = 2;
     
+    // 选择文件夹后更新 TAB 标题为文件夹名
+    fileListView->OnFolderChanged = [this, titleLabel](const std::wstring& folderPath) {
+        std::wstring folderName = folderPath;
+        size_t pos = folderName.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            folderName = folderName.substr(pos + 1);
+        }
+        titleLabel->SetText(folderName.c_str());
+    };
+    
     Button* closeBtn = new Button(tabContainer);
     tabContainer->Add(closeBtn);
     closeBtn->SetText(L"x");

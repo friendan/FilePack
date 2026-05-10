@@ -36,6 +36,7 @@ private:
 public:
     std::function<void()> OnDoubleClickEmpty = nullptr;
     std::function<void(const std::wstring&)> OnLog = nullptr;
+    std::function<void(const std::wstring&)> OnFolderChanged = nullptr;
 
     virtual const Size& GetContentSize() override {
         m_cachedContentSize.Width = Width();
@@ -50,6 +51,9 @@ public:
     void SetFolderPath(const std::wstring& path) {
         m_folderPath = path;
         LoadFilesFromFolder(path);
+        if (OnFolderChanged) {
+            OnFolderChanged(path);
+        }
     }
     
 public:
