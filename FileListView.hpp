@@ -356,13 +356,14 @@ public:
     }
 
     void PackSelectedFiles7z() {
-        // 统计选中的文件
-        int totalSelected = 0;
-        size_t totalSize = 0;
+        // 统计选中的文件并收集路径
+        std::vector<std::wstring> fileList;
         for (size_t i = 0; i < m_checkBoxs.size() && i < m_files.size(); i++) {
-            if (m_checkBoxs[i]->GetCheck()) totalSelected++;
+            if (m_checkBoxs[i]->GetCheck()) {
+                fileList.push_back(m_files[i].fullPath);
+            }
         }
-        if (totalSelected == 0) {
+        if (fileList.empty()) {
             if (OnLog) OnLog(L"[7z] No files selected");
             return;
         }
@@ -381,94 +382,48 @@ public:
         std::wstring outputPath = packDir + L"\\" + fileName;
         
         if (OnLog) OnLog(L"[7z] Creating: " + outputPath);
-        if (OnLog) OnLog(L"[7z] Files: " + std::to_wstring(totalSelected));
+        if (OnLog) OnLog(L"[7z] Files: " + std::to_wstring((int)fileList.size()));
         
-        // 用 libarchive 生成标准 7z 文件
-        struct archive* a = archive_write_new();
-        archive_write_set_format_7zip(a);
+        // 查找 7zG.exe
+        std::wstring sevenZExe = PathUtil::GetExeDir() + L"\\7z\\7zG.exe";
+        if (GetFileAttributesW(sevenZExe.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            sevenZExe = L"7zG.exe";
+            if (OnLog) OnLog(L"[7z] Using system 7zG.exe");
+        } else {
+            if (OnLog) OnLog(L"[7z] Using: " + sevenZExe);
+        }
         
-        int r = archive_write_open_filename(a, AppUtil::WStrToStr(outputPath).c_str());
-        if (r != ARCHIVE_OK) {
-            if (OnLog) OnLog(L"[7z] Failed to open: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
-            archive_write_free(a);
+        // 构建命令行
+        // 7zG.exe a -ad -mx5 -t7z "输出路径" "文件1" "文件2" ...
+        std::wstring cmdLine = L"\"" + sevenZExe + L"\" a -ad -mx5 -t7z \"" + outputPath + L"\"";
+        for (const auto& f : fileList) {
+            cmdLine += L" \"" + f + L"\"";
+        }
+        
+        if (OnLog) OnLog(L"[7z] Running: " + cmdLine);
+        
+        // 启动 7zG.exe（显示窗口，不等待）
+        STARTUPINFOW si = { sizeof(si) };
+        PROCESS_INFORMATION pi;
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNORMAL;
+        
+        // cmdline 需要可写缓冲区
+        std::vector<wchar_t> cmdBuf(cmdLine.c_str(), cmdLine.c_str() + cmdLine.size() + 1);
+        
+        BOOL ok = CreateProcessW(NULL, cmdBuf.data(), NULL, NULL, FALSE,
+            0, NULL, NULL, &si, &pi);
+        
+        if (!ok) {
+            if (OnLog) OnLog(L"[7z] Failed to launch 7zG.exe");
             return;
         }
         
-        int packedCount = 0;
-        for (size_t fi = 0; fi < m_files.size() && fi < m_checkBoxs.size(); fi++) {
-            if (!m_checkBoxs[fi]->GetCheck()) continue;
-            const auto& filePath = m_files[fi].fullPath;
-            
-            // 计算相对路径：文件夹名/文件相对路径
-            std::wstring folderName = m_folderPath;
-            size_t pos = folderName.find_last_of(L"\\/");
-            if (pos != std::wstring::npos) {
-                folderName = folderName.substr(pos + 1);
-            }
-            std::wstring relativePath = filePath;
-            if (relativePath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
-                if (relativePath.length() > m_folderPath.length() + 1) {
-                    relativePath = relativePath.substr(m_folderPath.length() + 1);
-                } else {
-                    relativePath = L"";
-                }
-            }
-            if (!relativePath.empty()) {
-                relativePath = folderName + L"/" + relativePath;
-            } else {
-                relativePath = folderName;
-            }
-            
-            // 读取文件内容
-            FILE* f = nullptr;
-            if (_wfopen_s(&f, filePath.c_str(), L"rb") != 0 || !f) {
-                if (OnLog) OnLog(L"[7z] Cannot open: " + filePath);
-                continue;
-            }
-            
-            _fseeki64(f, 0, SEEK_END);
-            int64_t fileSize = _ftelli64(f);
-            _fseeki64(f, 0, SEEK_SET);
-            
-            struct archive_entry* entry = archive_entry_new();
-            archive_entry_set_pathname(entry, AppUtil::WStrToStr(relativePath).c_str());
-            archive_entry_set_size(entry, fileSize);
-            archive_entry_set_filetype(entry, AE_IFREG);
-            archive_entry_set_perm(entry, 0644);
-            // 保留文件修改时间
-            auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                m_files[fi].modifyTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
-            time_t mtime = std::chrono::system_clock::to_time_t(sctp);
-            archive_entry_set_mtime(entry, mtime, 0);
-            
-            r = archive_write_header(a, entry);
-            if (r != ARCHIVE_OK) {
-                if (OnLog) OnLog(L"[7z] Header error: " + std::wstring(AppUtil::StrToWStr(archive_error_string(a))));
-                archive_entry_free(entry);
-                fclose(f);
-                continue;
-            }
-            
-            char buf[65536];
-            size_t bytesRead;
-            while ((bytesRead = fread(buf, 1, sizeof(buf), f)) > 0) {
-                archive_write_data(a, buf, bytesRead);
-            }
-            
-            archive_entry_free(entry);
-            fclose(f);
-            packedCount++;
-        }
+        // 不等待，关闭句柄即可
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
         
-        archive_write_close(a);
-        archive_write_free(a);
-        
-        if (packedCount == 0) {
-            DeleteFileW(outputPath.c_str());
-            if (OnLog) OnLog(L"[7z] Failed - no files packed");
-        } else {
-            if (OnLog) OnLog(L"[7z] Done! Packed " + std::to_wstring(packedCount) + L" files to: " + outputPath);
-        }
+        if (OnLog) OnLog(L"[7z] 7zG.exe launched for " + std::to_wstring((int)fileList.size()) + L" files");
     }
 
     void LoadXmlLayout() {
