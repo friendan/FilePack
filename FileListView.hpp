@@ -278,12 +278,24 @@ public:
         for (size_t fi = 0; fi < m_files.size() && fi < m_checkBoxs.size(); fi++) {
             if (!m_checkBoxs[fi]->GetCheck()) continue;
             const auto& filePath = m_files[fi].fullPath;
-            // 计算相对路径（去掉文件夹路径前缀）
+            // 计算相对路径：文件夹名/文件相对路径
+            std::wstring folderName = m_folderPath;
+            size_t pos = folderName.find_last_of(L"\\/");
+            if (pos != std::wstring::npos) {
+                folderName = folderName.substr(pos + 1);
+            }
             std::wstring relativePath = filePath;
             if (relativePath.compare(0, m_folderPath.length(), m_folderPath) == 0) {
                 if (relativePath.length() > m_folderPath.length() + 1) {
                     relativePath = relativePath.substr(m_folderPath.length() + 1);
+                } else {
+                    relativePath = L"";
                 }
+            }
+            if (!relativePath.empty()) {
+                relativePath = folderName + L"/" + relativePath;
+            } else {
+                relativePath = folderName;
             }
             
             // 读取文件内容
