@@ -72,10 +72,11 @@ void MainForm::Init() {
         };
     }
     
-    Control* logTabPage = new Control(mainTabs);
+    VLayout* logTabPage = new VLayout(mainTabs);
     logTabPage->Name = L"logTabPage";
     logTabPage->SetDockStyle(DockStyle::Fill);
     logTabPage->Style.BackColor = Color(255, 255, 255);
+    logTabPage->Margin.Top = 5;
     
     logBox = new TextBox();
     logBox->SetParent(logTabPage);
