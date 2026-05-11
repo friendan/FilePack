@@ -232,8 +232,6 @@ void MainForm::AddNewTab() {
     
     m_tabPages.push_back(tabPage);
 
-    this->Refresh();
-    
     int newTabIndex = (int)m_tabPages.size();
     
     // 创建TAB标签容器（标题 + 关闭按钮）
@@ -272,6 +270,7 @@ void MainForm::AddNewTab() {
     closeBtn->Style.FontSize = 12;
     closeBtn->Margin.Right = 4;
     closeBtn->Style.Border = 0;
+    closeBtn->Invalidate();
     
     // 关闭按钮事件：延迟删除控件，避免事件处理中自身被销毁
     closeBtn->EventHandler = [this, tabContainer](Control* sender, EventArgs& args) {
@@ -336,6 +335,7 @@ void MainForm::AddNewTab() {
     } else {
         tabBar->Add(tabContainer);
     }
+    tabContainer->Invalidate();
     tabButtons.push_back(tabContainer);
     
     UpdateTabButtonStates(newTabIndex);
@@ -344,6 +344,9 @@ void MainForm::AddNewTab() {
     
     AddLog(L"Switched to new tab");
     UpdateStatus(L"已添加新TAB", tabTitle.c_str(), L"");
+    
+    // 最后统一刷新
+    this->Refresh();
 }
 
 void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
