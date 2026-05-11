@@ -77,6 +77,7 @@ void MainForm::Init() {
     logTabPage->SetDockStyle(DockStyle::Fill);
     logTabPage->Style.BackColor = Color(255, 255, 255);
     logTabPage->Margin.Top = 5;
+    logTabPage->Margin.Left = 5;
     
     logBox = new TextBox();
     logBox->SetParent(logTabPage);
@@ -87,6 +88,8 @@ void MainForm::Init() {
     logBox->Style.BackColor = Color(255, 255, 255);
     logBox->Style.ForeColor = Color(0, 0, 0);
     logBox->Style.FontSize = 12;
+    logBox->Margin.Left = 10;
+    logBox->Margin.Top = 10;
     
     mainTabs->Add(logTabPage);
     
