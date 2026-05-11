@@ -55,6 +55,17 @@ void MainForm::Init() {
                 if (btnTabLog) {
                     bool isVisible = btnTabLog->IsVisible();
                     btnTabLog->SetVisible(!isVisible);
+                    if (mainTabs) {
+                        if (!isVisible) {
+                            // 显示时切换到日志 TAB（索引 0）
+                            mainTabs->SetPageIndex(0);
+                            UpdateTabButtonStates(0);
+                        } else if (m_tabPages.size() > 0) {
+                            // 隐藏时切换到第一个文件 TAB
+                            mainTabs->SetPageIndex(m_newTabStartIndex);
+                            UpdateTabButtonStates(m_newTabStartIndex);
+                        }
+                    }
                     this->Invalidate();
                 }
             }
