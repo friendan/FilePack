@@ -45,6 +45,21 @@ void MainForm::Init() {
     btnAddTab = (Button*)this->FindControl("btnAddTab");
     mainTabs = (TabLayout*)this->FindControl("mainTabs");
     tabBar = (HLayout*)this->FindControl("tabBar");
+    btnTabLog = (Button*)this->FindControl("btnTabLog");
+    btnToggleLog = (Button*)this->FindControl("btnToggleLog");
+    
+    // 日志切换按钮
+    if (btnToggleLog) {
+        btnToggleLog->EventHandler = [this](Control* sender, EventArgs& args) {
+            if (args.EventType == Event::OnMouseDown) {
+                if (btnTabLog) {
+                    bool isVisible = btnTabLog->IsVisible();
+                    btnTabLog->SetVisible(!isVisible);
+                    this->Invalidate();
+                }
+            }
+        };
+    }
     
     Control* logTabPage = new Control(mainTabs);
     logTabPage->Name = L"logTabPage";

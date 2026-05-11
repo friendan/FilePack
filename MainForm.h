@@ -28,6 +28,8 @@ class MainForm : public Window {
 private:
     UIManager ui;
     TextBox* logBox = nullptr;
+    Button* btnTabLog = nullptr;
+    Button* btnToggleLog = nullptr;
     Label* statusLeft = nullptr;
     Label* statusCenter = nullptr;
     Label* statusRight = nullptr;

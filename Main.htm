@@ -10,6 +10,7 @@
                 text="日志"
                 margin-left="2"
                 margin-right="2"
+                visible="false"
             ></button>
             <spacer width="5"></spacer>
             <button
@@ -26,8 +27,10 @@
         <tablayout id="mainTabs"> </tablayout>
     </vbox>
 
-    <!-- 底部状态栏（3栏） -->
+    <!-- 底部状态栏 -->
     <hbox id="statusbar" height="30" margin="5,0,5,5">
+        <button class="btn" id="btnToggleLog" width="40" text="日志"></button>
+        <spacer width="5"></spacer>
         <label id="statusLeft" width="200" halign="left" text="就绪"></label>
         <spacer></spacer>
         <label id="statusCenter" width="200" halign="center" text=""></label>
