@@ -9,6 +9,7 @@
 #include "AppUtil.hpp"
 #include <algorithm>
 #include <functional>
+#include <thread>
 #include <shellapi.h>
 #include <CommCtrl.h>
 #include <archive.h>
@@ -508,126 +509,128 @@ public:
     void LoadFilesFromFolder(const std::wstring& folderPath) {
         if (OnLog) OnLog(L"[FileListView] Loading: " + folderPath);
         
+        // 先清空旧数据（主线程）
         for (auto item : m_itemLayouts) {
             m_contentLayout->Remove(item, true);
         }
         m_itemLayouts.clear();
         m_checkBoxs.clear();
         m_files.clear();
+        this->RefreshLayout();
         
-        try {
-            int fileCount = 0;
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(folderPath)) {
-                if (entry.is_regular_file()) {
-                    FileInfo info;
-                    info.fullPath = entry.path().wstring();
-                    info.fileSize = entry.file_size();
-                    info.modifyTime = entry.last_write_time();
-                    m_files.push_back(info);
-                    fileCount++;
-                }
-            }
-            
-            if (OnLog) OnLog(L"[FileListView] Found: " + std::to_wstring(fileCount) + L" files");
-            
-            std::sort(m_files.begin(), m_files.end(), 
-                [](const FileInfo& a, const FileInfo& b) {
-                    return a.modifyTime > b.modifyTime;
-                });
-            
-            for (size_t i = 0; i < m_files.size(); i++) {
-                const auto& file = m_files[i];
-                HLayout* itemLayout = new HLayout(m_contentLayout);
-                m_contentLayout->Add(itemLayout);
-                itemLayout->SetFixedHeight(m_itemHeight);
-                // 奇偶行不同颜色
-                Color originalBgColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
-                itemLayout->Style.BackColor = originalBgColor;
-                m_itemLayouts.push_back(itemLayout);
-                
-// 添加复选框
-                CheckBox* cb = new CheckBox(itemLayout);
-                itemLayout->Add(cb);
-                cb->SetFixedWidth(20);
-                cb->SetFixedHeight(m_itemHeight);
-                // 复选框样式：灰色边框，白色背景
-                cb->Style.Border = 1;
-                cb->Style.Border.Color = Color(160, 160, 160);
-                cb->Style.Border.Style = StrokeStyle::Solid;
-                cb->Style.BackColor = Color(255, 255, 255);
-                // 选中时：蓝色边框，蓝色 ✔ 标记
-                cb->CheckedStyle.Border = 1;
-                cb->CheckedStyle.Border.Color = Color(0, 120, 212);
-                cb->CheckedStyle.Border.Style = StrokeStyle::Solid;
-                cb->CheckedStyle.BackColor = Color(255, 255, 255);
-                cb->CheckedStyle.ForeColor = Color(0, 120, 212);
-                cb->SetText(L"");
-                cb->TextAlign = TextAlign::MiddleCenter;
-                // 勾选/取消时更新文字，并改变行背景色
-                cb->CheckedChanged = [cb, itemLayout, originalBgColor](CheckBox* sender, bool checked) {
-                    cb->SetText(checked ? L"\u2714" : L"");
-                    itemLayout->Style.BackColor = checked ? Color(220, 235, 255) : originalBgColor;
-                    cb->Invalidate();
-                };
-                // 复选框穿透右键事件，让 FileListView 处理
-                cb->EventPassThrough = Event::OnMouseDown;
-                m_checkBoxs.push_back(cb);
-                
-                Label* indexLabel = new Label(itemLayout);
-                itemLayout->Add(indexLabel);
-                indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
-                indexLabel->SetFixedWidth(40);
-                indexLabel->TextAlign = TextAlign::MiddleCenter;
-                
-                Label* timeLabel = new Label(itemLayout);
-                itemLayout->Add(timeLabel);
-                timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
-                timeLabel->SetFixedWidth(150);
-                
-                Label* sizeLabel = new Label(itemLayout);
-                itemLayout->Add(sizeLabel);
-                sizeLabel->SetText(AppUtil::FormatFileSize(file.fileSize).c_str());
-                sizeLabel->SetFixedWidth(100);
-                
-                Label* pathLabel = new Label(itemLayout);
-                itemLayout->Add(pathLabel);
-                pathLabel->SetText(file.fullPath.c_str());
-                pathLabel->TextAlign = TextAlign::MiddleLeft;
-                // 文件路径列自动占满剩余宽度
-                pathLabel->SetRateWidth(1.0f);
-                // 超出列宽时显示省略号
-                pathLabel->SetElidedText(L"...");
-                
-                // 行内所有子控件穿透双击和右键事件
-                indexLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
-                timeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
-                sizeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
-                pathLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
-                
-                itemLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
-                // 行双击事件：切换复选框
-                int cbIndex = i;
-                itemLayout->EventHandler = [this, cbIndex](Control* sender, EventArgs& args) {
-                    if (args.EventType == Event::OnMouseDoubleClick) {
-                        if (cbIndex < (int)m_checkBoxs.size() && m_checkBoxs[cbIndex]) {
-                            CheckBox* cb = m_checkBoxs[cbIndex];
-                            cb->SetCheck(!cb->GetCheck());
-                            if (cb->CheckedChanged) {
-                                cb->CheckedChanged(cb, cb->GetCheck());
-                            }
-                        }
+        if (OnLog) OnLog(L"[FileListView] Scanning in background thread...");
+        
+        // 后台线程遍历文件夹
+        std::thread([this, folderPath]() {
+            std::vector<FileInfo> files;
+            try {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(folderPath)) {
+                    if (entry.is_regular_file()) {
+                        FileInfo info;
+                        info.fullPath = entry.path().wstring();
+                        info.fileSize = entry.file_size();
+                        info.modifyTime = entry.last_write_time();
+                        files.push_back(info);
                     }
-                };
+                }
+                
+                std::sort(files.begin(), files.end(),
+                    [](const FileInfo& a, const FileInfo& b) {
+                        return a.modifyTime > b.modifyTime;
+                    });
+                
+                // 回到主线程更新 UI
+                ezui::BeginInvoke([this, files]() {
+                    if (OnLog) OnLog(L"[FileListView] Found: " + std::to_wstring(files.size()) + L" files");
+                    m_files = files;
+                    
+                    for (size_t i = 0; i < m_files.size(); i++) {
+                        const auto& file = m_files[i];
+                        HLayout* itemLayout = new HLayout(m_contentLayout);
+                        m_contentLayout->Add(itemLayout);
+                        itemLayout->SetFixedHeight(m_itemHeight);
+                        Color originalBgColor = (i % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248);
+                        itemLayout->Style.BackColor = originalBgColor;
+                        m_itemLayouts.push_back(itemLayout);
+                        
+                        CheckBox* cb = new CheckBox(itemLayout);
+                        itemLayout->Add(cb);
+                        cb->SetFixedWidth(20);
+                        cb->SetFixedHeight(m_itemHeight);
+                        cb->Style.Border = 1;
+                        cb->Style.Border.Color = Color(160, 160, 160);
+                        cb->Style.Border.Style = StrokeStyle::Solid;
+                        cb->Style.BackColor = Color(255, 255, 255);
+                        cb->CheckedStyle.Border = 1;
+                        cb->CheckedStyle.Border.Color = Color(0, 120, 212);
+                        cb->CheckedStyle.Border.Style = StrokeStyle::Solid;
+                        cb->CheckedStyle.BackColor = Color(255, 255, 255);
+                        cb->CheckedStyle.ForeColor = Color(0, 120, 212);
+                        cb->SetText(L"");
+                        cb->TextAlign = TextAlign::MiddleCenter;
+                        cb->CheckedChanged = [cb, itemLayout, originalBgColor](CheckBox* sender, bool checked) {
+                            cb->SetText(checked ? L"\u2714" : L"");
+                            itemLayout->Style.BackColor = checked ? Color(220, 235, 255) : originalBgColor;
+                            cb->Invalidate();
+                        };
+                        cb->EventPassThrough = Event::OnMouseDown;
+                        m_checkBoxs.push_back(cb);
+                        
+                        Label* indexLabel = new Label(itemLayout);
+                        itemLayout->Add(indexLabel);
+                        indexLabel->SetText((L"#" + std::to_wstring(i + 1)).c_str());
+                        indexLabel->SetFixedWidth(40);
+                        indexLabel->TextAlign = TextAlign::MiddleCenter;
+                        
+                        Label* timeLabel = new Label(itemLayout);
+                        itemLayout->Add(timeLabel);
+                        timeLabel->SetText(AppUtil::FormatFileTime(file.modifyTime).c_str());
+                        timeLabel->SetFixedWidth(150);
+                        
+                        Label* sizeLabel = new Label(itemLayout);
+                        itemLayout->Add(sizeLabel);
+                        sizeLabel->SetText(AppUtil::FormatFileSize(file.fileSize).c_str());
+                        sizeLabel->SetFixedWidth(100);
+                        
+                        Label* pathLabel = new Label(itemLayout);
+                        itemLayout->Add(pathLabel);
+                        pathLabel->SetText(file.fullPath.c_str());
+                        pathLabel->TextAlign = TextAlign::MiddleLeft;
+                        pathLabel->SetRateWidth(1.0f);
+                        pathLabel->SetElidedText(L"...");
+                        
+                        indexLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                        timeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                        sizeLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                        pathLabel->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                        
+                        itemLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
+                        int cbIndex = i;
+                        itemLayout->EventHandler = [this, cbIndex](Control* sender, EventArgs& args) {
+                            if (args.EventType == Event::OnMouseDoubleClick) {
+                                if (cbIndex < (int)m_checkBoxs.size() && m_checkBoxs[cbIndex]) {
+                                    CheckBox* cb = m_checkBoxs[cbIndex];
+                                    cb->SetCheck(!cb->GetCheck());
+                                    if (cb->CheckedChanged) {
+                                        cb->CheckedChanged(cb, cb->GetCheck());
+                                    }
+                                }
+                            }
+                        };
+                    }
+                    
+                    if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
+                    this->RefreshLayout();
+                    m_scrollOffset = 0;
+                });
             }
-            
-            if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
-            
-            this->RefreshLayout();
-            m_scrollOffset = 0;
-        }
-        catch (const std::exception& e) {
-            if (OnLog) OnLog(L"[FileListView] Error: " + std::wstring(e.what(), e.what() + strlen(e.what())));
-        }
+            catch (const std::exception& e) {
+                std::string err = e.what();
+                ezui::BeginInvoke([this, err]() {
+                    if (OnLog) OnLog(L"[FileListView] Error: " + std::wstring(err.begin(), err.end()));
+                });
+            }
+        }).detach();
     }
     
     void OnItemDoubleClick(const Point& point) {
