@@ -51,4 +51,5 @@ public:
     void AddNewTab();
     void SelectFolderAndLoad(FileListView* fileListView);
     virtual void OnClose(bool& close) override;
+    virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 };

@@ -36,6 +36,9 @@ void MainForm::Init() {
     }
 
     ui.SetupUI(this);
+    
+    // 窗口拖动通过 WndProc 中 WM_NCHITTEST 实现
+    
     statusLeft = (Label*)this->FindControl("statusLeft");
     statusCenter = (Label*)this->FindControl("statusCenter");
     statusRight = (Label*)this->FindControl("statusRight");
@@ -346,6 +349,56 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
         CoTaskMemFree(pidl);
     }
     AddLog(L"[DEBUG] SelectFolderAndLoad EXIT");
+}
+
+// 辅助函数：递归查找鼠标所在的最深层子控件
+// parentX/parentY 是相对于当前 parent 父容器的坐标
+static Control* FindControlAtPoint(Control* parent, int parentX, int parentY) {
+    if (!parent || !parent->IsVisible()) return nullptr;
+    for (auto* child : parent->GetControls()) {
+        if (!child->IsVisible()) continue;
+        auto cr = child->GetRect();
+        if (parentX >= cr.X && parentX < cr.X + cr.Width &&
+            parentY >= cr.Y && parentY < cr.Y + cr.Height) {
+            // 进入子控件空间：将坐标转换为相对于子控件的
+            return FindControlAtPoint(child, parentX - cr.X, parentY - cr.Y);
+        }
+    }
+    return parent;
+}
+
+static bool IsInteractiveControl(Control* ctl) {
+    if (!ctl) return false;
+    // 有事件处理器或 Action 的都是交互控件
+    if (ctl->EventHandler || ctl->Action != ControlAction::None) return true;
+    // 明确的交互控件类型
+    if (dynamic_cast<Button*>(ctl) ||
+        dynamic_cast<CheckBox*>(ctl) ||
+        dynamic_cast<TextBox*>(ctl) ||
+        dynamic_cast<TabLayout*>(ctl) ||
+        dynamic_cast<Label*>(ctl)) return true;
+    return false;
+}
+
+LRESULT MainForm::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (uMsg == WM_NCHITTEST) {
+        LRESULT result = __super::WndProc(uMsg, wParam, lParam);
+        if (result == HTCLIENT) {
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            ScreenToClient(Hwnd(), &pt);
+            // 从 main 容器开始查找鼠标下的控件
+            Control* mainContainer = this->FindControl("main");
+            if (mainContainer) {
+                Control* target = FindControlAtPoint(mainContainer, pt.x, pt.y);
+                if (target && IsInteractiveControl(target)) {
+                    return HTCLIENT;
+                }
+            }
+            return HTCAPTION;
+        }
+        return result;
+    }
+    return __super::WndProc(uMsg, wParam, lParam);
 }
 
 void MainForm::OnClose(bool& close) {
