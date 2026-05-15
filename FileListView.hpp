@@ -15,6 +15,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include "PathUtil.hpp"
+#include "FilterHelper.hpp"
 #include "Lzma2Enc.h"
 #include "Alloc.h"
 #pragma comment(lib, "comctl32.lib")
@@ -278,6 +279,14 @@ public:
         PathUtil::EnsureDirExists(packDir);
         std::wstring outputPath = packDir + L"\\" + fileName;
         
+        // 提取文件夹名用于过滤
+        std::wstring packFolderName;
+        {
+            size_t p = m_folderPath.find_last_of(L"\\/");
+            packFolderName = (p != std::wstring::npos) ? m_folderPath.substr(p + 1) : m_folderPath;
+        }
+        FilterHelper packFilter;
+        
         if (OnLog) OnLog(L"[Pack] Creating: " + outputPath);
         if (OnLog) OnLog(L"[Pack] Files: " + std::to_wstring(totalSelected));
         
@@ -296,6 +305,19 @@ public:
         for (size_t fi = 0; fi < m_files.size() && fi < m_checkBoxs.size(); fi++) {
             if (!m_checkBoxs[fi]->GetCheck()) continue;
             const auto& filePath = m_files[fi].fullPath;
+            
+            // 检查是否被过滤
+            std::wstring chkRel = filePath;
+            if (chkRel.compare(0, m_folderPath.length(), m_folderPath) == 0) {
+                if (chkRel.length() > m_folderPath.length() + 1) {
+                    chkRel = chkRel.substr(m_folderPath.length() + 1);
+                }
+            }
+            if (!chkRel.empty() && packFilter.IsFiltered(packFolderName, chkRel)) {
+                if (OnLog) OnLog(L"[Pack] Filtered: " + chkRel);
+                continue;
+            }
+            
             // 计算相对路径：文件夹名/文件相对路径
             std::wstring folderName = m_folderPath;
             size_t pos = folderName.find_last_of(L"\\/");
@@ -364,11 +386,31 @@ public:
     }
 
     void PackSelectedFiles7z() {
-        // 统计选中的文件并收集路径
+        // 提取文件夹名用于过滤
+        std::wstring packFolderName;
+        {
+            size_t p = m_folderPath.find_last_of(L"\\/");
+            packFolderName = (p != std::wstring::npos) ? m_folderPath.substr(p + 1) : m_folderPath;
+        }
+        FilterHelper packFilter;
+        
+        // 统计选中的文件并收集路径（过滤排除项）
         std::vector<std::wstring> fileList;
         for (size_t i = 0; i < m_checkBoxs.size() && i < m_files.size(); i++) {
             if (m_checkBoxs[i]->GetCheck()) {
-                fileList.push_back(m_files[i].fullPath);
+                const auto& fp = m_files[i].fullPath;
+                // 检查是否被过滤
+                std::wstring chkRel = fp;
+                if (chkRel.compare(0, m_folderPath.length(), m_folderPath) == 0) {
+                    if (chkRel.length() > m_folderPath.length() + 1) {
+                        chkRel = chkRel.substr(m_folderPath.length() + 1);
+                    }
+                }
+                if (!chkRel.empty() && packFilter.IsFiltered(packFolderName, chkRel)) {
+                    if (OnLog) OnLog(L"[7z] Filtered: " + chkRel);
+                    continue;
+                }
+                fileList.push_back(fp);
             }
         }
         if (fileList.empty()) {
@@ -523,14 +565,38 @@ public:
         m_files.clear();
         this->RefreshLayout();
         
+        // 提取文件夹名
+        std::wstring folderName;
+        size_t pos = folderPath.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            folderName = folderPath.substr(pos + 1);
+        } else {
+            folderName = folderPath;
+        }
+        
         // 后台线程遍历文件夹
-        std::thread([this, folderPath]() {
+        std::thread([this, folderPath, folderName]() {
+            FilterHelper filter;
             std::vector<FileInfo> files;
             try {
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(folderPath)) {
                     if (entry.is_regular_file()) {
+                        // 计算相对路径用于过滤
+                        std::wstring fullPath = entry.path().wstring();
+                        std::wstring relPath = fullPath;
+                        if (relPath.compare(0, folderPath.length(), folderPath) == 0) {
+                            if (relPath.length() > folderPath.length() + 1) {
+                                relPath = relPath.substr(folderPath.length() + 1);
+                            } else {
+                                relPath = L"";
+                            }
+                        }
+                        // 检查是否被过滤规则排除
+                        if (!relPath.empty() && filter.IsFiltered(folderName, relPath)) {
+                            continue;
+                        }
                         FileInfo info;
-                        info.fullPath = entry.path().wstring();
+                        info.fullPath = fullPath;
                         info.fileSize = entry.file_size();
                         info.modifyTime = entry.last_write_time();
                         files.push_back(info);
