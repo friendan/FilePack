@@ -189,8 +189,6 @@ void MainForm::AddNewTab() {
     tabCount++;
     std::wstring tabTitle = L"文件列表 " + std::to_wstring(tabCount);
     
-    AddLog(L"Creating new tab: " + tabTitle);
-    
     Control* tabPage = new Control(mainTabs);
     tabPage->Name = L"tabPage" + std::to_wstring(tabCount);
     tabPage->SetDockStyle(DockStyle::Fill);
@@ -213,8 +211,6 @@ void MainForm::AddNewTab() {
     tabPage->Add(fileListView);
     fileListView->SetDockStyle(DockStyle::Fill);
     
-    AddLog(L"FileListView created");
-    
     fileListView->OnLog = [this](const std::wstring& msg) {
         AddLog(msg);
     };
@@ -227,8 +223,6 @@ void MainForm::AddNewTab() {
     currentFileListView = fileListView;
     
     mainTabs->Add(tabPage);
-    
-    AddLog(L"Tab added to TabLayout");
     
     m_tabPages.push_back(tabPage);
 
@@ -342,7 +336,6 @@ void MainForm::AddNewTab() {
     
     mainTabs->SetPageIndex(newTabIndex);
     
-    AddLog(L"Switched to new tab");
     UpdateStatus(L"已添加新TAB", tabTitle.c_str(), L"");
     
     // 最后统一刷新
