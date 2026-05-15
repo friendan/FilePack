@@ -507,8 +507,6 @@ public:
     }
     
     void LoadFilesFromFolder(const std::wstring& folderPath) {
-        if (OnLog) OnLog(L"[FileListView] Loading: " + folderPath);
-        
         // 先清空旧数据（主线程）
         for (auto item : m_itemLayouts) {
             m_contentLayout->Remove(item, true);
@@ -517,8 +515,6 @@ public:
         m_checkBoxs.clear();
         m_files.clear();
         this->RefreshLayout();
-        
-        if (OnLog) OnLog(L"[FileListView] Scanning in background thread...");
         
         // 后台线程遍历文件夹
         std::thread([this, folderPath]() {
@@ -541,7 +537,6 @@ public:
                 
                 // 回到主线程更新 UI
                 ezui::BeginInvoke([this, files]() {
-                    if (OnLog) OnLog(L"[FileListView] Found: " + std::to_wstring(files.size()) + L" files");
                     m_files = files;
                     
                     for (size_t i = 0; i < m_files.size(); i++) {
@@ -619,7 +614,6 @@ public:
                         };
                     }
                     
-                    if (OnLog) OnLog(L"[FileListView] Added: " + std::to_wstring(m_itemLayouts.size()) + L" items");
                     this->RefreshLayout();
                     m_scrollOffset = 0;
                 });

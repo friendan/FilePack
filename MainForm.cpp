@@ -102,9 +102,6 @@ void MainForm::Init() {
     
     mainTabs->Remove(tempPage, true);
     
-    AddLog(L"Program started");
-    AddLog(L"Log system initialized");
-    
     Button* btnTabLog = (Button*)this->FindControl("btnTabLog");
     if (btnTabLog) {
         tabButtons.push_back(btnTabLog);
@@ -112,21 +109,9 @@ void MainForm::Init() {
         m_newTabStartIndex = 1;
         btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
-                auto startTime = std::chrono::high_resolution_clock::now();
-                AddLog(L"[PERF] Switching to log tab");
-                
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
-                
-                auto endTime = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-                AddLog(L"[PERF] SetPageIndex took: " + std::to_wstring(duration) + L"ms");
-                
                 this->Invalidate();
-                
-                auto endTime2 = std::chrono::high_resolution_clock::now();
-                auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(endTime2 - startTime).count();
-                AddLog(L"[PERF] Invalidate + Total took: " + std::to_wstring(duration2) + L"ms");
             }
         };
     }
@@ -139,7 +124,6 @@ void MainForm::Init() {
         };
     }
     
-    AddLog(L"ready...");
     UpdateStatus(L"就绪", L"", L"");
 }
 
@@ -216,7 +200,6 @@ void MainForm::AddNewTab() {
     };
     
     fileListView->OnDoubleClickEmpty = [this, fileListView]() {
-        AddLog(L"Double click empty area detected");
         SelectFolderAndLoad(fileListView);
     };
     
@@ -343,11 +326,7 @@ void MainForm::AddNewTab() {
 }
 
 void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
-    AddLog(L"[DEBUG] SelectFolderAndLoad ENTER");
-    AddLog(fileListView ? L"SelectFolderAndLoad called, fileListView pointer: valid" : L"SelectFolderAndLoad called, fileListView pointer: null");
-    
     if (!fileListView) {
-        AddLog(L"ERROR: fileListView is null!");
         return;
     }
     
@@ -355,26 +334,17 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
     bi.lpszTitle = L"选择文件夹";
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     
-    AddLog(L"[DEBUG] Calling SHBrowseForFolder...");
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-    AddLog(L"[DEBUG] SHBrowseForFolder returned");
     if (pidl != NULL) {
         wchar_t path[MAX_PATH];
         if (SHGetPathFromIDList(pidl, path)) {
             std::wstring folderPath(path);
-            AddLog(L"Calling SetFolderPath...");
             fileListView->SetFolderPath(folderPath);
-            AddLog(L"SetFolderPath returned");
-            
             this->Invalidate();
-            AddLog(L"UI refreshed");
-            
-            AddLog(L"Selected folder: " + folderPath);
             UpdateStatus(L"已选择文件夹", folderPath.c_str(), L"");
         }
         CoTaskMemFree(pidl);
     }
-    AddLog(L"[DEBUG] SelectFolderAndLoad EXIT");
 }
 
 // 辅助函数：递归查找鼠标所在的最深层子控件
