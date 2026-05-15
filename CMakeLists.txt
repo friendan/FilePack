@@ -16,6 +16,7 @@ add_definitions(-DLIBARCHIVE_STATIC) # libarchive 静态库
 
 
 include_directories(ezui/include/EzUI) # 包含ezui头文件目录
+include_directories(${CMAKE_SOURCE_DIR}) # 包含项目根目录（toml.hpp 所在位置）
 file(GLOB EZUI_SOURCES "ezui/sources/*.cpp") # 收集ezui源文件
 
 # ======== zlib 静态库 ========
