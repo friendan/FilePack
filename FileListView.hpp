@@ -45,7 +45,7 @@ public:
 
     virtual const Size& GetContentSize() override {
         m_cachedContentSize.Width = Width();
-        m_cachedContentSize.Height = (int)m_itemLayouts.size() * m_itemHeight;
+        m_cachedContentSize.Height = (int)m_itemLayouts.size() * m_itemHeight + m_itemHeight + 5;
         return m_cachedContentSize;
     }
 
@@ -689,8 +689,9 @@ public:
                     
                     this->RefreshLayout();
                     m_scrollOffset = 0;
+                    m_scrollBar.RefreshScroll();
                     if (OnFilesLoaded) {
-                        OnFilesLoaded((int)m_files.size());
+                        OnFilesLoaded((int)m_itemLayouts.size());
                     }
                 });
             }
@@ -728,6 +729,6 @@ public:
     }
     
     int GetFileCount() const {
-        return (int)m_files.size();
+        return (int)m_itemLayouts.size();
     }
 };
