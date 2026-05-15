@@ -40,6 +40,7 @@ public:
     std::function<void()> OnDoubleClickEmpty = nullptr;
     std::function<void(const std::wstring&)> OnLog = nullptr;
     std::function<void(const std::wstring&)> OnFolderChanged = nullptr;
+    std::function<void(int)> OnFilesLoaded = nullptr;
 
     virtual const Size& GetContentSize() override {
         m_cachedContentSize.Width = Width();
@@ -616,6 +617,9 @@ public:
                     
                     this->RefreshLayout();
                     m_scrollOffset = 0;
+                    if (OnFilesLoaded) {
+                        OnFilesLoaded((int)m_files.size());
+                    }
                 });
             }
             catch (const std::exception& e) {
@@ -649,5 +653,9 @@ public:
     
     const std::wstring& GetFolderPath() const {
         return m_folderPath;
+    }
+    
+    int GetFileCount() const {
+        return (int)m_files.size();
     }
 };

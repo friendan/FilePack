@@ -230,13 +230,23 @@ void MainForm::AddNewTab() {
     titleLabel->Margin.Right = 2;
     
     // 选择文件夹后更新 TAB 标题为文件夹名
-    fileListView->OnFolderChanged = [this, titleLabel](const std::wstring& folderPath) {
+    fileListView->OnFolderChanged = [this, titleLabel, fileListView](const std::wstring& folderPath) {
         std::wstring folderName = folderPath;
         size_t pos = folderName.find_last_of(L"\\/");
         if (pos != std::wstring::npos) {
             folderName = folderName.substr(pos + 1);
         }
         titleLabel->SetText(folderName.c_str());
+        // 先更新状态栏显示文件夹路径（文件总数后面再更新）
+        UpdateStatus(folderPath.c_str(), L"", L"");
+    };
+    
+    // 文件扫描完成后的回调，更新文件总数
+    fileListView->OnFilesLoaded = [this, fileListView](int count) {
+        std::wstring path = fileListView->GetFolderPath();
+        if (!path.empty()) {
+            UpdateStatus((path + L"  |  " + std::to_wstring(count)).c_str(), L"", L"");
+        }
     };
     
     Button* closeBtn = new Button(tabContainer);
@@ -302,9 +312,13 @@ void MainForm::AddNewTab() {
             if (btnIndex >= 0) {
                 mainTabs->SetPageIndex(btnIndex);
                 UpdateTabButtonStates(btnIndex);
-                // 更新状态栏显示文件夹路径
+                // 更新状态栏显示文件夹路径和文件总数
                 std::wstring path = fileListView->GetFolderPath();
-                UpdateStatus(path.empty() ? L"" : path.c_str(), L"", L"");
+                if (!path.empty()) {
+                    UpdateStatus((path + L"  |  " + std::to_wstring(fileListView->GetFileCount())).c_str(), L"", L"");
+                } else {
+                    UpdateStatus(L"", L"", L"");
+                }
                 this->Invalidate();
             }
         }
