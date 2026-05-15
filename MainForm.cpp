@@ -60,6 +60,7 @@ void MainForm::Init() {
                             // 显示时切换到日志 TAB（索引 0）
                             mainTabs->SetPageIndex(0);
                             UpdateTabButtonStates(0);
+                            UpdateStatus(L"", L"", L"");
                         } else if (m_tabPages.size() > 0) {
                             // 隐藏时切换到第一个文件 TAB
                             mainTabs->SetPageIndex(m_newTabStartIndex);
@@ -111,7 +112,7 @@ void MainForm::Init() {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
-                UpdateStatus(L"", L"日志", L"");
+                UpdateStatus(L"", L"", L"");
                 this->Invalidate();
             }
         };
