@@ -111,6 +111,7 @@ void MainForm::Init() {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
+                UpdateStatus(L"", L"日志", L"");
                 this->Invalidate();
             }
         };
@@ -288,7 +289,7 @@ void MainForm::AddNewTab() {
     };
     
     // 点击标题文字切换到该 TAB
-    titleLabel->EventHandler = [this, tabContainer](Control* sender, EventArgs& args) {
+    titleLabel->EventHandler = [this, tabContainer, fileListView](Control* sender, EventArgs& args) {
         if (args.EventType == Event::OnMouseDown) {
             int btnIndex = -1;
             for (size_t i = m_newTabStartIndex; i < tabButtons.size(); i++) {
@@ -300,6 +301,9 @@ void MainForm::AddNewTab() {
             if (btnIndex >= 0) {
                 mainTabs->SetPageIndex(btnIndex);
                 UpdateTabButtonStates(btnIndex);
+                // 更新状态栏显示文件夹路径
+                std::wstring path = fileListView->GetFolderPath();
+                UpdateStatus(path.empty() ? L"" : path.c_str(), L"", L"");
                 this->Invalidate();
             }
         }
@@ -319,7 +323,7 @@ void MainForm::AddNewTab() {
     
     mainTabs->SetPageIndex(newTabIndex);
     
-    UpdateStatus(L"已添加新TAB", tabTitle.c_str(), L"");
+    UpdateStatus(L"", tabTitle.c_str(), L"");
     
     // 最后统一刷新
     this->Refresh();
@@ -341,7 +345,7 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
             std::wstring folderPath(path);
             fileListView->SetFolderPath(folderPath);
             this->Invalidate();
-            UpdateStatus(L"已选择文件夹", folderPath.c_str(), L"");
+            UpdateStatus(folderPath.c_str(), L"", L"");
         }
         CoTaskMemFree(pidl);
     }
