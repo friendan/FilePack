@@ -126,13 +126,18 @@ void MainForm::Init() {
         };
     }
     
-    // 从配置文件恢复之前保存的文件夹 TAB
+    // 从配置文件恢复之前保存的文件夹 TAB（延迟执行，确保子类化已安装）
     auto savedFolders = m_config.GetFolders();
-    for (const auto& folder : savedFolders) {
-        if (!folder.empty()) {
-            AddNewTab();
-            SelectFolderAndLoad(currentFileListView, folder);
-        }
+    if (!savedFolders.empty()) {
+        this->Refresh();
+        ezui::BeginInvoke([this, savedFolders]() {
+            for (const auto& folder : savedFolders) {
+                if (!folder.empty()) {
+                    AddNewTab();
+                    SelectFolderAndLoad(currentFileListView, folder);
+                }
+            }
+        });
     }
     
     if (m_tabPages.empty()) {

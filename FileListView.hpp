@@ -132,13 +132,19 @@ public:
             };
         }
 
-        // 延迟安装窗口子类化处理右键消息（等 Hwnd() 可用后）
-        ezui::BeginInvoke([this]() {
-            HWND hWnd = Hwnd();
-            if (hWnd) {
-                SetWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
-            }
-        });
+        // 安装窗口子类化处理右键消息
+        HWND hWnd = Hwnd();
+        if (hWnd) {
+            SetWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
+        } else {
+            // Hwnd 尚不可用，延迟安装
+            ezui::BeginInvoke([this]() {
+                HWND h = Hwnd();
+                if (h) {
+                    SetWindowSubclass(h, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
+                }
+            });
+        }
 
         this->Invalidate();
     }
