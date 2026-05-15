@@ -126,7 +126,18 @@ void MainForm::Init() {
         };
     }
     
-    UpdateStatus(L"就绪", L"", L"");
+    // 从配置文件恢复之前保存的文件夹 TAB
+    auto savedFolders = m_config.GetFolders();
+    for (const auto& folder : savedFolders) {
+        if (!folder.empty()) {
+            AddNewTab();
+            SelectFolderAndLoad(currentFileListView, folder);
+        }
+    }
+    
+    if (m_tabPages.empty()) {
+        UpdateStatus(L"就绪", L"", L"");
+    }
 }
 
 void MainForm::AddLog(const std::wstring& message) {
@@ -278,7 +289,19 @@ void MainForm::AddNewTab() {
             Control* page = (pageIndex < (int)m_tabPages.size()) ? m_tabPages[pageIndex] : nullptr;
             int switchTo = (btnIndex - 1 >= 0) ? btnIndex - 1 : 0;
             
-            AddLog(L"Closing tab index: " + std::to_wstring(btnIndex));
+            // 从配置中移除文件夹路径
+            if (page) {
+                for (auto ctl : page->GetControls()) {
+                    FileListView* flv = dynamic_cast<FileListView*>(ctl);
+                    if (flv) {
+                        std::wstring fp = flv->GetFolderPath();
+                        if (!fp.empty()) {
+                            m_config.RemoveFolder(fp);
+                        }
+                        break;
+                    }
+                }
+            }
             
             // 先移除 vector 数据
             tabButtons.erase(tabButtons.begin() + btnIndex);
@@ -358,12 +381,22 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
         wchar_t path[MAX_PATH];
         if (SHGetPathFromIDList(pidl, path)) {
             std::wstring folderPath(path);
+            m_config.AddFolder(folderPath);
             fileListView->SetFolderPath(folderPath);
             this->Invalidate();
             UpdateStatus(folderPath.c_str(), L"", L"");
         }
         CoTaskMemFree(pidl);
     }
+}
+
+void MainForm::SelectFolderAndLoad(FileListView* fileListView, const std::wstring& folderPath) {
+    if (!fileListView || folderPath.empty()) {
+        return;
+    }
+    m_config.AddFolder(folderPath);
+    fileListView->SetFolderPath(folderPath);
+    this->Invalidate();
 }
 
 // 辅助函数：递归查找鼠标所在的最深层子控件

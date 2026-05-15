@@ -14,6 +14,7 @@
 #include <TabLayout.h>
 #include "resource.h"
 #include "AppUtil.hpp"
+#include "AppToml.hpp"
 #include "PathUtil.hpp"
 #include "FileListView.hpp"
 #include <fstream>
@@ -42,6 +43,7 @@ private:
     FileListView* currentFileListView = nullptr;
     int m_currentTabIndex = 0;
     int m_newTabStartIndex = 0;
+    AppToml m_config;
 
 public:
     MainForm(int width, int height);
@@ -52,6 +54,7 @@ public:
     void UpdateStatus(const std::wstring& left, const std::wstring& center, const std::wstring& right);
     void AddNewTab();
     void SelectFolderAndLoad(FileListView* fileListView);
+    void SelectFolderAndLoad(FileListView* fileListView, const std::wstring& folderPath);
     virtual void OnClose(bool& close) override;
     virtual LRESULT WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 };
