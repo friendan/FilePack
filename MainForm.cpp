@@ -143,6 +143,9 @@ void MainForm::Init() {
     if (m_tabPages.empty()) {
         UpdateStatus(L"就绪", L"", L"");
     }
+    
+    // 启用拖放文件/文件夹
+    DragAcceptFiles(this->Hwnd(), TRUE);
 }
 
 void MainForm::AddLog(const std::wstring& message) {
@@ -451,6 +454,49 @@ LRESULT MainForm::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         }
         return result;
     }
+    if (uMsg == WM_DROPFILES) {
+        HDROP hDrop = (HDROP)wParam;
+        
+        UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
+        if (fileCount > 0) {
+            wchar_t path[MAX_PATH];
+            DragQueryFileW(hDrop, 0, path, MAX_PATH);
+            
+            // 只接受文件夹
+            DWORD attr = GetFileAttributesW(path);
+            if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                std::wstring folderPath(path);
+                
+                // 找到当前显示的 Tab 对应的 FileListView
+                FileListView* targetListView = nullptr;
+                int curPageIndex = mainTabs->GetPageIndex();
+                if (curPageIndex >= m_newTabStartIndex) {
+                    int tabIdx = curPageIndex - m_newTabStartIndex;
+                    if (tabIdx >= 0 && tabIdx < (int)m_tabPages.size()) {
+                        for (auto ctl : m_tabPages[tabIdx]->GetControls()) {
+                            FileListView* flv = dynamic_cast<FileListView*>(ctl);
+                            if (flv) {
+                                targetListView = flv;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (targetListView) {
+                    m_config.AddFolder(folderPath);
+                    targetListView->SetFolderPath(folderPath);
+                    currentFileListView = targetListView;
+                    UpdateStatus(folderPath.c_str(), L"", L"");
+                    this->Invalidate();
+                }
+            }
+        }
+        
+        DragFinish(hDrop);
+        return 0;
+    }
+    
     return __super::WndProc(uMsg, wParam, lParam);
 }
 
