@@ -103,18 +103,18 @@ public:
         this->SetDockStyle(DockStyle::Fill);
         this->EventPassThrough = Event::OnMouseDoubleClick;
 
-        m_scrollBar.Parent = this;
+        LoadXmlLayout();
+        
+        m_headerLayout = (HLayout*)this->FindControl("header");
+        m_contentLayout = (VLayout*)this->FindControl("content");
+        
+        m_scrollBar.Parent = m_contentLayout ? m_contentLayout : this;
         m_scrollBar.SetFixedWidth(14);
         m_scrollBar.OffsetCallback = [this](int offset) {
             m_scrollOffset = offset;
             OffsetItems(offset);
             this->Invalidate();
         };
-        
-        LoadXmlLayout();
-        
-        m_headerLayout = (HLayout*)this->FindControl("header");
-        m_contentLayout = (VLayout*)this->FindControl("content");
         
         // 表头复选框已删除
         
