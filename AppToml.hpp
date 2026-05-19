@@ -28,6 +28,29 @@ private:
     }
 
 public:
+    // 设置/获取自定义 TAB 名称
+    void SetCustomTabName(const std::wstring& folderPath, const std::wstring& name) {
+        std::string key = AppUtil::WStrToStr(folderPath);
+        auto tbl = LoadTable();
+        auto* namesTbl = tbl["tab_names"].as_table();
+        toml::table names = namesTbl ? *namesTbl : toml::table{};
+        names.insert_or_assign(key, AppUtil::WStrToStr(name));
+        tbl.insert_or_assign("tab_names", names);
+        SaveTable(tbl);
+    }
+
+    std::wstring GetCustomTabName(const std::wstring& folderPath) {
+        auto tbl = LoadTable();
+        auto* namesTbl = tbl["tab_names"].as_table();
+        if (!namesTbl) return L"";
+        std::string key = AppUtil::WStrToStr(folderPath);
+        auto val = namesTbl->get(key);
+        if (val) {
+            return AppUtil::StrToWStr(val->value_or(""));
+        }
+        return L"";
+    }
+
     AppToml() {
         m_filePath = PathUtil::GetExeDir() + L"\\App.toml";
     }

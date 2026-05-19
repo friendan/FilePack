@@ -246,15 +246,72 @@ void MainForm::AddNewTab() {
     titleLabel->Margin.Left = 8;
     titleLabel->Margin.Right = 2;
     
+    // 双击 TAB 标签自定义名称
+    TextBox* tabNameEditor = new TextBox(tabContainer);
+    tabNameEditor->SetMultiLine(false);
+    tabNameEditor->SetFixedWidth(120);
+    tabNameEditor->SetFixedHeight(20);
+    tabNameEditor->Style.Border = 1;
+    tabNameEditor->Style.Border.Color = Color(0, 120, 212);
+    tabNameEditor->Style.Border.Style = StrokeStyle::Solid;
+    tabNameEditor->Style.FontSize = 12;
+    tabNameEditor->Margin.Left = 8;
+    tabNameEditor->SetVisible(false);
+    tabContainer->Add(tabNameEditor);
+    
+    // 双击 Label 时事件穿透到 tabContainer，由 tabContainer 处理
+    titleLabel->EventPassThrough = Event::OnMouseDoubleClick;
+    tabContainer->EventHandler = [this, titleLabel, tabNameEditor, fileListView](Control* sender, EventArgs& args) {
+        if (args.EventType == Event::OnMouseDoubleClick) {
+            tabNameEditor->SetText(titleLabel->GetText().c_str());
+            titleLabel->SetVisible(false);
+            tabNameEditor->SetVisible(true);
+        }
+    };
+    
+    tabNameEditor->EventHandler = [this, titleLabel, tabNameEditor, fileListView](Control* sender, EventArgs& args) {
+        if (args.EventType == Event::OnKillFocus) {
+            std::wstring name = AppUtil::StrToWStr(tabNameEditor->GetText().c_str());
+            if (!name.empty()) {
+                titleLabel->SetText(name.c_str());
+                std::wstring fp = fileListView->GetFolderPath();
+                if (!fp.empty()) {
+                    m_config.SetCustomTabName(fp, name);
+                }
+            }
+            tabNameEditor->SetVisible(false);
+            titleLabel->SetVisible(true);
+        }
+        if (args.EventType == Event::OnKeyDown) {
+            KeyboardEventArgs& keyArgs = (KeyboardEventArgs&)args;
+            if (keyArgs.wParam == VK_RETURN) {
+                std::wstring name = AppUtil::StrToWStr(tabNameEditor->GetText().c_str());
+                if (!name.empty()) {
+                    titleLabel->SetText(name.c_str());
+                    std::wstring fp = fileListView->GetFolderPath();
+                    if (!fp.empty()) {
+                        m_config.SetCustomTabName(fp, name);
+                    }
+                }
+                tabNameEditor->SetVisible(false);
+                titleLabel->SetVisible(true);
+            }
+        }
+    };
+    
     // 选择文件夹后更新 TAB 标题为文件夹名
     fileListView->OnFolderChanged = [this, titleLabel, fileListView](const std::wstring& folderPath) {
-        std::wstring folderName = folderPath;
-        size_t pos = folderName.find_last_of(L"\\/");
-        if (pos != std::wstring::npos) {
-            folderName = folderName.substr(pos + 1);
+        std::wstring customName = m_config.GetCustomTabName(folderPath);
+        if (!customName.empty()) {
+            titleLabel->SetText(customName.c_str());
+        } else {
+            std::wstring folderName = folderPath;
+            size_t pos = folderName.find_last_of(L"\\/");
+            if (pos != std::wstring::npos) {
+                folderName = folderName.substr(pos + 1);
+            }
+            titleLabel->SetText(folderName.c_str());
         }
-        titleLabel->SetText(folderName.c_str());
-        // 先更新状态栏显示文件夹路径（文件总数后面再更新）
         UpdateStatus(folderPath.c_str(), L"");
     };
     
