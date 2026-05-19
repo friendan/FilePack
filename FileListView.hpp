@@ -686,16 +686,27 @@ public:
                                     }
                                 }
                             } else if (args.EventType == Event::OnMouseDown) {
-                                // 恢复上一次点击行的背景色
-                                if (m_clickedRowIndex >= 0 && m_clickedRowIndex < (int)m_itemLayouts.size()) {
-                                    auto* prevLayout = m_itemLayouts[m_clickedRowIndex];
-                                    bool prevChecked = m_clickedRowIndex < (int)m_checkBoxs.size() && m_checkBoxs[m_clickedRowIndex] && m_checkBoxs[m_clickedRowIndex]->GetCheck();
-                                    prevLayout->Style.BackColor = prevChecked ? Color(220, 235, 255) : ((m_clickedRowIndex % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248));
+                                // Ctrl + 左键点击 = 切换复选框（等同于双击）
+                                if (GetKeyState(VK_CONTROL) & 0x8000) {
+                                    if (cbIndex < (int)m_checkBoxs.size() && m_checkBoxs[cbIndex]) {
+                                        CheckBox* cb = m_checkBoxs[cbIndex];
+                                        cb->SetCheck(!cb->GetCheck());
+                                        if (cb->CheckedChanged) {
+                                            cb->CheckedChanged(cb, cb->GetCheck());
+                                        }
+                                    }
+                                } else {
+                                    // 恢复上一次点击行的背景色
+                                    if (m_clickedRowIndex >= 0 && m_clickedRowIndex < (int)m_itemLayouts.size()) {
+                                        auto* prevLayout = m_itemLayouts[m_clickedRowIndex];
+                                        bool prevChecked = m_clickedRowIndex < (int)m_checkBoxs.size() && m_checkBoxs[m_clickedRowIndex] && m_checkBoxs[m_clickedRowIndex]->GetCheck();
+                                        prevLayout->Style.BackColor = prevChecked ? Color(220, 235, 255) : ((m_clickedRowIndex % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248));
+                                    }
+                                    // 设置当前点击行的背景色（点击高亮，与选中的浅蓝区分）
+                                    m_clickedRowIndex = cbIndex;
+                                    itemLayout->Style.BackColor = Color(200, 220, 255);
+                                    itemLayout->Invalidate();
                                 }
-                                // 设置当前点击行的背景色（点击高亮，与选中的浅蓝区分）
-                                m_clickedRowIndex = cbIndex;
-                                itemLayout->Style.BackColor = Color(200, 220, 255);
-                                itemLayout->Invalidate();
                             }
                         };
                     }
