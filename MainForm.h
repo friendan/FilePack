@@ -40,7 +40,6 @@ private:
     int tabCount = 1;
     std::vector<Control*> tabButtons;
     std::vector<Control*> m_tabPages;
-    std::vector<Label*> m_tabSeparators;
     FileListView* currentFileListView = nullptr;
     int m_currentTabIndex = 0;
     int m_newTabStartIndex = 0;
