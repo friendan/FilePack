@@ -629,6 +629,8 @@ public:
                         itemLayout->Add(cb);
                         cb->SetFixedWidth(20);
                         cb->SetFixedHeight(m_itemHeight);
+                        cb->Margin.Top = 2;
+                        cb->Margin.Bottom = 2;
                         cb->Style.Border = 1;
                         cb->Style.Border.Color = Color(160, 160, 160);
                         cb->Style.Border.Style = StrokeStyle::Solid;
