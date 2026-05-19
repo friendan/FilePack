@@ -230,13 +230,25 @@ void MainForm::AddNewTab() {
 
     int newTabIndex = (int)m_tabPages.size();
     
+    // 创建TAB分隔符竖线
+    Label* tabSeparator = new Label();
+    tabSeparator->SetText(L"|");
+    tabSeparator->SetFixedWidth(2);
+    tabSeparator->SetFixedHeight(30);
+    tabSeparator->SetText(L"");
+    tabSeparator->Style.BackColor = Color(255, 0, 0);
+    tabSeparator->TextMargin.Left = 0;
+    tabSeparator->TextMargin.Right = 0;
+    tabSeparator->Margin.Left = 0;
+    tabSeparator->Margin.Right = 0;
+    
     // 创建TAB标签容器（标题 + 关闭按钮）
-    HLayout* tabContainer = new HLayout(tabBar);
+    HLayout* tabContainer = new HLayout();
     tabContainer->SetFixedHeight(30);
-    tabContainer->SetFixedWidth(150);
+    tabContainer->SetFixedWidth(148);
     tabContainer->Style.BackColor = Color(230, 230, 230);
-    tabContainer->Margin.Left = 2;
-    tabContainer->Margin.Right = 2;
+    tabContainer->Margin.Left = 0;
+    tabContainer->Margin.Right = 0;
     
     Label* titleLabel = new Label(tabContainer);
     tabContainer->Add(titleLabel);
@@ -372,9 +384,15 @@ void MainForm::AddNewTab() {
             if (page) {
                 m_tabPages.erase(m_tabPages.begin() + pageIndex);
             }
+            Label* sep = nullptr;
+            if (pageIndex >= 0 && pageIndex < (int)m_tabSeparators.size()) {
+                sep = m_tabSeparators[pageIndex];
+                m_tabSeparators.erase(m_tabSeparators.begin() + pageIndex);
+            }
             
             // 延迟到事件处理完成后再删除控件
-            ezui::BeginInvoke([this, tabContainer, page, switchTo]() {
+            ezui::BeginInvoke([this, tabContainer, sep, page, switchTo]() {
+                if (sep) tabBar->Remove(sep, true);
                 tabBar->Remove(tabContainer, true);
                 if (page) {
                     mainTabs->Remove(page, true);
@@ -411,15 +429,18 @@ void MainForm::AddNewTab() {
         }
     };
     
-    // 插入到 btnAddTab 之前
+    // 插入分隔符和 TAB 到 btnAddTab 之前
     int addBtnIndex = tabBar->IndexOf(btnAddTab);
     if (addBtnIndex >= 0) {
-        tabBar->Insert(addBtnIndex, tabContainer);
+        tabBar->Insert(addBtnIndex, tabSeparator);
+        tabBar->Insert(addBtnIndex + 1, tabContainer);
     } else {
+        tabBar->Add(tabSeparator);
         tabBar->Add(tabContainer);
     }
     tabContainer->Invalidate();
     tabButtons.push_back(tabContainer);
+    m_tabSeparators.push_back(tabSeparator);
     
     UpdateTabButtonStates(newTabIndex);
     
