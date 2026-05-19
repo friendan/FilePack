@@ -55,6 +55,8 @@ void MainForm::Init() {
                 if (btnTabLog) {
                     bool isVisible = btnTabLog->IsVisible();
                     btnTabLog->SetVisible(!isVisible);
+                    // 同步隐藏/显示 btnTabLog 右侧的分隔符
+                    if (m_logSep) m_logSep->SetVisible(!isVisible);
                     if (mainTabs) {
                         if (!isVisible) {
                             // 显示时切换到日志 TAB（索引 0）
@@ -117,16 +119,18 @@ void MainForm::Init() {
             }
         };
         // btnTabLog 右侧加分隔符
-        Label* logSep = new Label(tabBar);
-        logSep->SetFixedWidth(2);
-        logSep->SetFixedHeight(30);
-        logSep->Style.BackColor = Color(200, 200, 200);
-        logSep->Margin.Left = 0;
-        logSep->Margin.Right = 0;
+        m_logSep = new Label(tabBar);
+        m_logSep->SetFixedWidth(2);
+        m_logSep->SetFixedHeight(30);
+        m_logSep->Style.BackColor = Color(200, 200, 200);
+        m_logSep->Margin.Left = 0;
+        m_logSep->Margin.Right = 0;
         int logIdx = tabBar->IndexOf(btnTabLog);
         if (logIdx >= 0) {
-            tabBar->Insert(logIdx + 1, logSep);
+            tabBar->Insert(logIdx + 1, m_logSep);
         }
+        // 同步 btnTabLog 的可见状态
+        m_logSep->SetVisible(btnTabLog->IsVisible());
     }
     
     if (btnAddTab) {
