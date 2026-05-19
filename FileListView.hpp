@@ -37,6 +37,7 @@ private:
     UIManager m_ui;
     Size m_cachedContentSize;
     int m_clickedRowIndex = -1;
+    int m_anchorRowIndex = -1;
     
 public:
     std::function<void()> OnDoubleClickEmpty = nullptr;
@@ -565,6 +566,7 @@ public:
         m_checkBoxs.clear();
         m_files.clear();
         m_clickedRowIndex = -1;
+        m_anchorRowIndex = -1;
         this->RefreshLayout();
         
         // 提取文件夹名
@@ -695,6 +697,22 @@ public:
                                             cb->CheckedChanged(cb, cb->GetCheck());
                                         }
                                     }
+                                } else if (GetKeyState(VK_SHIFT) & 0x8000) {
+                                    // Shift + 左键点击 = 从锚点行到当前行范围选中/取消选中
+                                    if (m_anchorRowIndex >= 0 && m_anchorRowIndex < (int)m_checkBoxs.size()) {
+                                        bool setChecked = !m_checkBoxs[m_anchorRowIndex]->GetCheck();
+                                        int from = min(m_anchorRowIndex, cbIndex);
+                                        int to = max(m_anchorRowIndex, cbIndex);
+                                        for (int r = from; r <= to; r++) {
+                                            if (r < (int)m_checkBoxs.size() && m_checkBoxs[r]) {
+                                                CheckBox* cb = m_checkBoxs[r];
+                                                cb->SetCheck(setChecked);
+                                                if (cb->CheckedChanged) {
+                                                    cb->CheckedChanged(cb, setChecked);
+                                                }
+                                            }
+                                        }
+                                    }
                                 } else {
                                     // 恢复上一次点击行的背景色
                                     if (m_clickedRowIndex >= 0 && m_clickedRowIndex < (int)m_itemLayouts.size()) {
@@ -704,6 +722,7 @@ public:
                                     }
                                     // 设置当前点击行的背景色（点击高亮，与选中的浅蓝区分）
                                     m_clickedRowIndex = cbIndex;
+                                    m_anchorRowIndex = cbIndex;
                                     itemLayout->Style.BackColor = Color(200, 220, 255);
                                     itemLayout->Invalidate();
                                 }
