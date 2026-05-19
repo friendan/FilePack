@@ -51,7 +51,7 @@ public:
     void AddLog(const std::wstring& message);
     void ClearLog();
     void UpdateTabButtonStates(int selectedIndex);
-    void UpdateStatus(const std::wstring& left, const std::wstring& center, const std::wstring& right);
+    void UpdateStatus(const std::wstring& left, const std::wstring& center);
     void AddNewTab();
     void SelectFolderAndLoad(FileListView* fileListView);
     void SelectFolderAndLoad(FileListView* fileListView, const std::wstring& folderPath);

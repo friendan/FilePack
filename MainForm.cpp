@@ -60,7 +60,7 @@ void MainForm::Init() {
                             // 显示时切换到日志 TAB（索引 0）
                             mainTabs->SetPageIndex(0);
                             UpdateTabButtonStates(0);
-                            UpdateStatus(L"", L"", L"");
+                            UpdateStatus(L"", L"");
                         } else if (m_tabPages.size() > 0) {
                             // 隐藏时切换到第一个文件 TAB
                             mainTabs->SetPageIndex(m_newTabStartIndex);
@@ -112,7 +112,7 @@ void MainForm::Init() {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
-                UpdateStatus(L"", L"", L"");
+                UpdateStatus(L"", L"");
                 this->Invalidate();
             }
         };
@@ -141,7 +141,7 @@ void MainForm::Init() {
     }
     
     if (m_tabPages.empty()) {
-        UpdateStatus(L"就绪", L"", L"");
+        UpdateStatus(L"就绪", L"");
     }
     
     // 启用拖放文件/文件夹
@@ -184,10 +184,8 @@ void MainForm::UpdateTabButtonStates(int selectedIndex) {
     }
 }
 
-void MainForm::UpdateStatus(const std::wstring& left, const std::wstring& center, const std::wstring& right) {
+void MainForm::UpdateStatus(const std::wstring& left, const std::wstring& center) {
     if (statusLeft) statusLeft->SetText(left);
-    if (statusCenter) statusCenter->SetText(center);
-    if (statusRight) statusRight->SetText(right);
 }
 
 void MainForm::AddNewTab() {
@@ -257,14 +255,14 @@ void MainForm::AddNewTab() {
         }
         titleLabel->SetText(folderName.c_str());
         // 先更新状态栏显示文件夹路径（文件总数后面再更新）
-        UpdateStatus(folderPath.c_str(), L"", L"");
+        UpdateStatus(folderPath.c_str(), L"");
     };
     
     // 文件扫描完成后的回调，更新文件总数
     fileListView->OnFilesLoaded = [this, fileListView](int count) {
         std::wstring path = fileListView->GetFolderPath();
         if (!path.empty()) {
-            UpdateStatus((path + L"  |  " + std::to_wstring(count)).c_str(), L"", L"");
+            UpdateStatus((path + L"  |  " + std::to_wstring(count)).c_str(), L"");
         }
     };
     
@@ -346,9 +344,9 @@ void MainForm::AddNewTab() {
                 // 更新状态栏显示文件夹路径和文件总数
                 std::wstring path = fileListView->GetFolderPath();
                 if (!path.empty()) {
-                    UpdateStatus((path + L"  |  " + std::to_wstring(fileListView->GetFileCount())).c_str(), L"", L"");
+                    UpdateStatus((path + L"  |  " + std::to_wstring(fileListView->GetFileCount())).c_str(), L"");
                 } else {
-                    UpdateStatus(L"", L"", L"");
+                    UpdateStatus(L"", L"");
                 }
                 this->Invalidate();
             }
@@ -369,7 +367,7 @@ void MainForm::AddNewTab() {
     
     mainTabs->SetPageIndex(newTabIndex);
     
-    UpdateStatus(L"", tabTitle.c_str(), L"");
+    UpdateStatus(L"", tabTitle.c_str());
     
     // 最后统一刷新
     this->Refresh();
@@ -392,7 +390,7 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
             m_config.AddFolder(folderPath);
             fileListView->SetFolderPath(folderPath);
             this->Invalidate();
-            UpdateStatus(folderPath.c_str(), L"", L"");
+            UpdateStatus(folderPath.c_str(), L"");
         }
         CoTaskMemFree(pidl);
     }
@@ -487,7 +485,7 @@ LRESULT MainForm::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                     m_config.AddFolder(folderPath);
                     targetListView->SetFolderPath(folderPath);
                     currentFileListView = targetListView;
-                    UpdateStatus(folderPath.c_str(), L"", L"");
+                    UpdateStatus(folderPath.c_str(), L"");
                     this->Invalidate();
                 }
             }
