@@ -266,6 +266,7 @@ void MainForm::AddNewTab() {
             tabNameEditor->SetText(titleLabel->GetText().c_str());
             titleLabel->SetVisible(false);
             tabNameEditor->SetVisible(true);
+            this->SetFocus(tabNameEditor);
         }
     };
     
