@@ -116,6 +116,17 @@ void MainForm::Init() {
                 this->Invalidate();
             }
         };
+        // btnTabLog 右侧加分隔符
+        Label* logSep = new Label(tabBar);
+        logSep->SetFixedWidth(2);
+        logSep->SetFixedHeight(30);
+        logSep->Style.BackColor = Color(200, 200, 200);
+        logSep->Margin.Left = 0;
+        logSep->Margin.Right = 0;
+        int logIdx = tabBar->IndexOf(btnTabLog);
+        if (logIdx >= 0) {
+            tabBar->Insert(logIdx + 1, logSep);
+        }
     }
     
     if (btnAddTab) {
