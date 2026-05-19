@@ -36,6 +36,7 @@ private:
     VLayout* m_contentLayout = nullptr;
     UIManager m_ui;
     Size m_cachedContentSize;
+    int m_clickedRowIndex = -1;
     
 public:
     std::function<void()> OnDoubleClickEmpty = nullptr;
@@ -563,6 +564,7 @@ public:
         m_itemLayouts.clear();
         m_checkBoxs.clear();
         m_files.clear();
+        m_clickedRowIndex = -1;
         this->RefreshLayout();
         
         // 提取文件夹名
@@ -674,7 +676,7 @@ public:
                         
                         itemLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
                         int cbIndex = i;
-                        itemLayout->EventHandler = [this, cbIndex](Control* sender, EventArgs& args) {
+                        itemLayout->EventHandler = [this, cbIndex, itemLayout, originalBgColor](Control* sender, EventArgs& args) {
                             if (args.EventType == Event::OnMouseDoubleClick) {
                                 if (cbIndex < (int)m_checkBoxs.size() && m_checkBoxs[cbIndex]) {
                                     CheckBox* cb = m_checkBoxs[cbIndex];
@@ -683,6 +685,17 @@ public:
                                         cb->CheckedChanged(cb, cb->GetCheck());
                                     }
                                 }
+                            } else if (args.EventType == Event::OnMouseDown) {
+                                // 恢复上一次点击行的背景色
+                                if (m_clickedRowIndex >= 0 && m_clickedRowIndex < (int)m_itemLayouts.size()) {
+                                    auto* prevLayout = m_itemLayouts[m_clickedRowIndex];
+                                    bool prevChecked = m_clickedRowIndex < (int)m_checkBoxs.size() && m_checkBoxs[m_clickedRowIndex] && m_checkBoxs[m_clickedRowIndex]->GetCheck();
+                                    prevLayout->Style.BackColor = prevChecked ? Color(220, 235, 255) : ((m_clickedRowIndex % 2 == 0) ? Color(255, 255, 255) : Color(248, 248, 248));
+                                }
+                                // 设置当前点击行的背景色（点击高亮，与选中的浅蓝区分）
+                                m_clickedRowIndex = cbIndex;
+                                itemLayout->Style.BackColor = Color(200, 220, 255);
+                                itemLayout->Invalidate();
                             }
                         };
                     }
