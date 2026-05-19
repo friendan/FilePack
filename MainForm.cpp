@@ -233,7 +233,7 @@ void MainForm::AddNewTab() {
     // 创建TAB标签容器（标题 + 关闭按钮 + 分隔符）
     HLayout* tabContainer = new HLayout();
     tabContainer->SetFixedHeight(30);
-    tabContainer->SetFixedWidth(156);
+    tabContainer->SetFixedWidth(154);
     tabContainer->Style.BackColor = Color(230, 230, 230);
     tabContainer->Margin.Left = 0;
     tabContainer->Margin.Right = 0;
@@ -341,7 +341,7 @@ void MainForm::AddNewTab() {
     tabContainer->Add(rightSep);
     rightSep->SetFixedWidth(2);
     rightSep->SetFixedHeight(30);
-    rightSep->Style.BackColor = Color(255, 0, 0);
+    rightSep->Style.BackColor = Color(200, 200, 200);
     rightSep->Margin.Left = 0;
     rightSep->Margin.Right = 0;
     
