@@ -31,7 +31,7 @@ private:
     TextBox* logBox = nullptr;
     Label* m_logSep = nullptr;
     Button* btnTabLog = nullptr;
-    Button* btnToggleLog = nullptr;
+    Button* btnToggleAbout = nullptr;
     Label* statusLeft = nullptr;
     Label* statusCenter = nullptr;
     Label* statusRight = nullptr;

@@ -46,10 +46,10 @@ void MainForm::Init() {
     mainTabs = (TabLayout*)this->FindControl("mainTabs");
     tabBar = (HLayout*)this->FindControl("tabBar");
     btnTabLog = (Button*)this->FindControl("btnTabLog");
-    btnToggleLog = (Button*)this->FindControl("btnToggleLog");
+    btnToggleAbout = (Button*)this->FindControl("btnToggleAbout");
     
-    // 加载 About.png 资源作为 btnToggleLog 的图片
-    if (btnToggleLog) {
+    // 加载 About.png 资源作为 btnToggleAbout 的图片
+    if (btnToggleAbout) {
         HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_ABOUT_PNG), RT_RCDATA);
         if (hRsrc) {
             HGLOBAL hGlobal = LoadResource(NULL, hRsrc);
@@ -58,18 +58,17 @@ void MainForm::Init() {
                 const void* data = LockResource(hGlobal);
                 if (data && size > 0) {
                     Image* img = new Image(data, size);
-                    btnToggleLog->Style.BackImage = img;
-                    btnToggleLog->Style.BackColor = Color(0, 0, 0, 0);
-                    btnToggleLog->Style.Border = 0;
-                    btnToggleLog->SetText(L"");
+                    btnToggleAbout->Style.BackImage = img;
+                    btnToggleAbout->Style.BackColor = Color(0, 0, 0, 0);
+                    btnToggleAbout->Style.Border = 0;
+                    btnToggleAbout->SetText(L"");
                 }
             }
         }
     }
     
-    // 日志切换按钮
-    if (btnToggleLog) {
-        btnToggleLog->EventHandler = [this](Control* sender, EventArgs& args) {
+    if (btnToggleAbout) {
+        btnToggleAbout->EventHandler = [this](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
                 if (btnTabLog) {
                     bool isVisible = btnTabLog->IsVisible();
