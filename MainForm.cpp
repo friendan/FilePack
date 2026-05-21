@@ -152,6 +152,13 @@ void MainForm::Init() {
                     SelectFolderAndLoad(currentFileListView, folder);
                 }
             }
+            // 恢复完成后更新状态栏为最后 TAB 的路径（文件数等异步扫描完成再更新）
+            if (currentFileListView) {
+                std::wstring p = currentFileListView->GetFolderPath();
+                if (!p.empty()) {
+                    UpdateStatus((p + L"  |  ...").c_str(), L"");
+                }
+            }
         });
     }
     
@@ -200,7 +207,10 @@ void MainForm::UpdateTabButtonStates(int selectedIndex) {
 }
 
 void MainForm::UpdateStatus(const std::wstring& left, const std::wstring& center) {
-    if (statusLeft) statusLeft->SetText(left);
+    if (statusLeft) {
+        statusLeft->SetText(left);
+        statusLeft->Invalidate();
+    }
 }
 
 void MainForm::AddNewTab() {
@@ -333,9 +343,11 @@ void MainForm::AddNewTab() {
     
     // 文件扫描完成后的回调，更新文件总数
     fileListView->OnFilesLoaded = [this, fileListView](int count) {
-        std::wstring path = fileListView->GetFolderPath();
-        if (!path.empty()) {
-            UpdateStatus((path + L"  |  " + std::to_wstring(count)).c_str(), L"");
+        if (fileListView == currentFileListView) {
+            std::wstring path = fileListView->GetFolderPath();
+            if (!path.empty()) {
+                UpdateStatus((path + L"  |  " + std::to_wstring(count)).c_str(), L"");
+            }
         }
     };
     
