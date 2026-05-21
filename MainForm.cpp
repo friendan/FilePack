@@ -45,7 +45,7 @@ void MainForm::Init() {
     btnAddTab = (Button*)this->FindControl("btnAddTab");
     mainTabs = (TabLayout*)this->FindControl("mainTabs");
     tabBar = (HLayout*)this->FindControl("tabBar");
-    btnTabLog = (Button*)this->FindControl("btnTabLog");
+    btnTabAbout = (Button*)this->FindControl("btnTabAbout");
     btnToggleAbout = (Button*)this->FindControl("btnToggleAbout");
     
     // 加载 About.png 资源作为 btnToggleAbout 的图片
@@ -70,10 +70,9 @@ void MainForm::Init() {
     if (btnToggleAbout) {
         btnToggleAbout->EventHandler = [this](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
-                if (btnTabLog) {
-                    bool isVisible = btnTabLog->IsVisible();
-                    btnTabLog->SetVisible(!isVisible);
-                    // 同步隐藏/显示 btnTabLog 右侧的分隔符
+                if (btnTabAbout) {
+                    bool isVisible = btnTabAbout->IsVisible();
+                    btnTabAbout->SetVisible(!isVisible);
                     if (m_logSep) m_logSep->SetVisible(!isVisible);
                     if (mainTabs) {
                         if (!isVisible) {
@@ -123,12 +122,12 @@ void MainForm::Init() {
     
     mainTabs->Remove(tempPage, true);
     
-    Button* btnTabLog = (Button*)this->FindControl("btnTabLog");
-    if (btnTabLog) {
-        tabButtons.push_back(btnTabLog);
+    Button* btnTabAbout = (Button*)this->FindControl("btnTabAbout");
+    if (btnTabAbout) {
+        tabButtons.push_back(btnTabAbout);
         UpdateTabButtonStates(0);
         m_newTabStartIndex = 1;
-        btnTabLog->EventHandler = [this](Control* sender, EventArgs& args) {
+        btnTabAbout->EventHandler = [this](Control* sender, EventArgs& args) {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
@@ -136,19 +135,19 @@ void MainForm::Init() {
                 this->Invalidate();
             }
         };
-        // btnTabLog 右侧加分隔符
+        // btnTabAbout 右侧加分隔符
         m_logSep = new Label(tabBar);
         m_logSep->SetFixedWidth(2);
         m_logSep->SetFixedHeight(30);
         m_logSep->Style.BackColor = Color(200, 200, 200);
         m_logSep->Margin.Left = 0;
         m_logSep->Margin.Right = 0;
-        int logIdx = tabBar->IndexOf(btnTabLog);
+        int logIdx = tabBar->IndexOf(btnTabAbout);
         if (logIdx >= 0) {
             tabBar->Insert(logIdx + 1, m_logSep);
         }
         // 同步 btnTabLog 的可见状态
-        m_logSep->SetVisible(btnTabLog->IsVisible());
+        m_logSep->SetVisible(btnTabAbout->IsVisible());
     }
     
     if (btnAddTab) {
