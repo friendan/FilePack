@@ -449,9 +449,9 @@ void MainForm::AddNewTab() {
     
     mainTabs->SetPageIndex(newTabIndex);
     
-    UpdateStatus(L"", tabTitle.c_str());
+    UpdateStatus(L"ready", L"");
     
-    // 最后统一刷新
+    this->Invalidate();
     this->Refresh();
 }
 
