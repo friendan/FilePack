@@ -74,17 +74,13 @@ void MainForm::Init() {
                     bool isVisible = btnTabAbout->IsVisible();
                     btnTabAbout->SetVisible(!isVisible);
                     if (m_logSep) m_logSep->SetVisible(!isVisible);
-                    if (mainTabs) {
-                        if (!isVisible) {
-                            // 显示时切换到日志 TAB（索引 0）
-                            mainTabs->SetPageIndex(0);
-                            UpdateTabButtonStates(0);
-                            UpdateStatus(L"", L"");
-                        } else if (m_tabPages.size() > 0) {
-                            // 隐藏时切换到第一个文件 TAB
-                            mainTabs->SetPageIndex(m_newTabStartIndex);
-                            UpdateTabButtonStates(m_newTabStartIndex);
-                        }
+                    if (!isVisible) {
+                        mainTabs->SetPageIndex(0);
+                        UpdateTabButtonStates(0);
+                        UpdateStatus(L"", L"");
+                    } else if (m_tabPages.size() > 0) {
+                        mainTabs->SetPageIndex(m_newTabStartIndex);
+                        UpdateTabButtonStates(m_newTabStartIndex);
                     }
                     this->Invalidate();
                 }
@@ -92,35 +88,16 @@ void MainForm::Init() {
         };
     }
     
-    VLayout* logTabPage = new VLayout(mainTabs);
-    logTabPage->Name = L"logTabPage";
-    logTabPage->SetDockStyle(DockStyle::Fill);
-    logTabPage->Style.BackColor = Color(255, 255, 255);
-    logTabPage->Margin.Top = 5;
-    logTabPage->Margin.Left = 5;
-    
-    logBox = new TextBox();
-    logBox->SetParent(logTabPage);
-    logBox->SetDockStyle(DockStyle::Fill);
-    logBox->Name = L"logBox";
-    logBox->SetMultiLine(true);
-    logBox->SetReadOnly(true);
-    logBox->Style.BackColor = Color(255, 255, 255);
-    logBox->Style.ForeColor = Color(0, 0, 0);
-    logBox->Style.FontSize = 12;
-    logBox->Margin.Left = 10;
-    logBox->Margin.Top = 10;
-    
-    mainTabs->Add(logTabPage);
-    
     Control* tempPage = new Control(mainTabs);
     tempPage->SetDockStyle(DockStyle::Fill);
-    tempPage->Style.BackColor = Color(200, 200, 200);
     mainTabs->Add(tempPage);
     
     mainTabs->SetPageIndex(0);
     
     mainTabs->Remove(tempPage, true);
+    
+    // pageAbout 作为 mainTabs 的第一个页
+    // 初始化后切到文件 TAB（如果有文件 TAB 的话由恢复逻辑处理）
     
     Button* btnTabAbout = (Button*)this->FindControl("btnTabAbout");
     if (btnTabAbout) {
@@ -131,7 +108,6 @@ void MainForm::Init() {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
-                UpdateStatus(L"", L"");
                 this->Invalidate();
             }
         };
