@@ -59,6 +59,8 @@ void MainForm::Init() {
                 if (data && size > 0) {
                     Image* img = new Image(data, size);
                     btnToggleLog->Style.BackImage = img;
+                    btnToggleLog->Style.BackColor = Color(0, 0, 0, 0);
+                    btnToggleLog->Style.Border = 0;
                     btnToggleLog->SetText(L"");
                 }
             }
