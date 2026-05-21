@@ -108,6 +108,7 @@ void MainForm::Init() {
             if (args.EventType == Event::OnMouseDown) {
                 mainTabs->SetPageIndex(0);
                 UpdateTabButtonStates(0);
+                UpdateStatus(L"", L"");
                 this->Invalidate();
             }
         };
