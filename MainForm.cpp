@@ -48,6 +48,23 @@ void MainForm::Init() {
     btnTabLog = (Button*)this->FindControl("btnTabLog");
     btnToggleLog = (Button*)this->FindControl("btnToggleLog");
     
+    // 加载 About.png 资源作为 btnToggleLog 的图片
+    if (btnToggleLog) {
+        HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_ABOUT_PNG), RT_RCDATA);
+        if (hRsrc) {
+            HGLOBAL hGlobal = LoadResource(NULL, hRsrc);
+            if (hGlobal) {
+                DWORD size = SizeofResource(NULL, hRsrc);
+                const void* data = LockResource(hGlobal);
+                if (data && size > 0) {
+                    Image* img = new Image(data, size);
+                    btnToggleLog->Style.BackImage = img;
+                    btnToggleLog->SetText(L"");
+                }
+            }
+        }
+    }
+    
     // 日志切换按钮
     if (btnToggleLog) {
         btnToggleLog->EventHandler = [this](Control* sender, EventArgs& args) {
