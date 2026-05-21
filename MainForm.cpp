@@ -405,6 +405,27 @@ void MainForm::AddNewTab() {
                 }
                 mainTabs->SetPageIndex(switchTo);
                 UpdateTabButtonStates(switchTo);
+                // 更新状态栏为当前 TAB 的路径
+                if (switchTo >= m_newTabStartIndex) {
+                    int tabIdx = switchTo - m_newTabStartIndex;
+                    if (tabIdx >= 0 && tabIdx < (int)m_tabPages.size()) {
+                        for (auto ctl : m_tabPages[tabIdx]->GetControls()) {
+                            FileListView* flv = dynamic_cast<FileListView*>(ctl);
+                            if (flv) {
+                                std::wstring p = flv->GetFolderPath();
+                                if (!p.empty()) {
+                                    UpdateStatus((p + L"  |  " + std::to_wstring(flv->GetFileCount())).c_str(), L"");
+                                } else {
+                                    UpdateStatus(L"ready", L"");
+                                }
+                                currentFileListView = flv;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    UpdateStatus(L"", L"");
+                }
                 this->Invalidate();
             });
         }
