@@ -461,7 +461,7 @@ void MainForm::AddNewTab() {
                 if (!path.empty()) {
                     UpdateStatus((path + L"  |  " + std::to_wstring(fileListView->GetFileCount())).c_str(), L"");
                 } else {
-                    UpdateStatus(L"", L"");
+                    UpdateStatus(L"ready", L"");
                 }
                 this->Invalidate();
             }
