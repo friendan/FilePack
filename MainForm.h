@@ -44,6 +44,10 @@ private:
     FileListView* currentFileListView = nullptr;
     int m_currentTabIndex = 0;
     int m_newTabStartIndex = 0;
+    bool m_draggingTab = false;
+    int m_dragFromTabIndex = -1;
+    int m_dragOverIndex = -1;
+    POINT m_dragStartPoint = { 0, 0 };
     AppToml m_config;
 
 public:

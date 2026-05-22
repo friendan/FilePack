@@ -619,6 +619,121 @@ LRESULT MainForm::WndProc(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         return 0;
     }
     
+    if (uMsg == WM_LBUTTONDOWN) {
+        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        if (tabBar) {
+            const Rect& barRect = tabBar->GetRect();
+            if (pt.x >= barRect.X && pt.x < barRect.X + barRect.Width &&
+                pt.y >= barRect.Y && pt.y < barRect.Y + barRect.Height) {
+                for (size_t i = 0; i < tabButtons.size(); i++) {
+                    const Rect& r = tabButtons[i]->GetRect();
+                    if (pt.x >= r.X && pt.x < r.X + r.Width &&
+                        pt.y >= r.Y && pt.y < r.Y + r.Height) {
+                        m_draggingTab = true;
+                        m_dragFromTabIndex = (int)i;
+                        m_dragOverIndex = (int)i;
+                        m_dragStartPoint = pt;
+                        break;
+                    }
+                }
+            }
+        }
+        SetCapture(Hwnd());
+    }
+    if (uMsg == WM_MOUSEMOVE && m_draggingTab) {
+        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        if (tabBar) {
+            // 找到当前鼠标所在的目标 TAB
+            int newOver = -1;
+            int minDist = 99999;
+            for (size_t i = 0; i < tabButtons.size(); i++) {
+                const Rect& r = tabButtons[i]->GetRect();
+                int midX = r.X + r.Width / 2;
+                int dist = abs(pt.x - midX);
+                if (dist < minDist) {
+                    minDist = dist;
+                    newOver = (int)i;
+                }
+            }
+            if (newOver != m_dragOverIndex) {
+                // 恢复上一个高亮 TAB 的背景色
+                if (m_dragOverIndex >= 0 && m_dragOverIndex < (int)tabButtons.size() &&
+                    m_dragOverIndex != m_dragFromTabIndex) {
+                    tabButtons[m_dragOverIndex]->Style.BackColor = Color(230, 230, 230);
+                }
+                m_dragOverIndex = newOver;
+                // 高亮当前目标 TAB（排除自身）
+                if (m_dragOverIndex >= 0 && m_dragOverIndex < (int)tabButtons.size() &&
+                    m_dragOverIndex != m_dragFromTabIndex) {
+                    tabButtons[m_dragOverIndex]->Style.BackColor = Color(200, 220, 240);
+                }
+                this->Invalidate();
+            }
+            this->Invalidate();
+        }
+    }
+    if (uMsg == WM_LBUTTONUP && m_draggingTab) {
+        m_draggingTab = false;
+        // 恢复所有 TAB 背景色
+        for (size_t i = 0; i < tabButtons.size(); i++) {
+            tabButtons[i]->Style.BackColor = Color(230, 230, 230);
+        }
+        ReleaseCapture();
+        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        // 判断是否移动了足够距离（防止误触）
+        int dx = pt.x - m_dragStartPoint.x;
+        if (abs(dx) < 10) {
+            m_dragFromTabIndex = -1;
+            this->Invalidate();
+            tabBar->RefreshLayout();
+            return __super::WndProc(uMsg, wParam, lParam);
+        }
+        // 找到目标 TAB 索引
+        int toIndex = -1;
+        if (tabBar) {
+            int minDist = 99999;
+            for (size_t i = 0; i < tabButtons.size(); i++) {
+                const Rect& r = tabButtons[i]->GetRect();
+                int midX = r.X + r.Width / 2;
+                int dist = abs(pt.x - midX);
+                if (dist < minDist) {
+                    minDist = dist;
+                    toIndex = (int)i;
+                }
+            }
+        }
+        if (toIndex >= 0 && toIndex != m_dragFromTabIndex) {
+            // 交换 TAB
+            int fromIdx = m_dragFromTabIndex;
+            int toIdx = toIndex;
+            if (fromIdx >= m_newTabStartIndex && toIdx >= m_newTabStartIndex &&
+                fromIdx < (int)tabButtons.size() && toIdx < (int)tabButtons.size()) {
+                // tabButtons 索引映射到 m_tabPages 索引
+                int fromPage = fromIdx - m_newTabStartIndex;
+                int toPage = toIdx - m_newTabStartIndex;
+                if (fromPage >= 0 && fromPage < (int)m_tabPages.size() &&
+                    toPage >= 0 && toPage < (int)m_tabPages.size()) {
+                    // 交换 tabBar 中的控件
+                    tabBar->SwapChild(tabButtons[fromIdx], tabButtons[toIdx]);
+                    // 交换 mainTabs 中的页面
+                    mainTabs->SwapChild(m_tabPages[fromPage], m_tabPages[toPage]);
+                    // 更新向量
+                    std::swap(tabButtons[fromIdx], tabButtons[toIdx]);
+                    std::swap(m_tabPages[fromPage], m_tabPages[toPage]);
+                    // 刷新 UI
+                    tabBar->RefreshLayout();
+                    mainTabs->RefreshLayout();
+                    this->Invalidate();
+                }
+            }
+        }
+        m_dragFromTabIndex = -1;
+        m_dragOverIndex = -1;
+        this->Invalidate();
+        // 恢复 HLayout 布局
+        tabBar->RefreshLayout();
+    }
+    
     return __super::WndProc(uMsg, wParam, lParam);
 }
 
