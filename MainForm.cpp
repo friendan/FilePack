@@ -155,14 +155,33 @@ void MainForm::Init() {
     auto savedFolders = m_config.GetFolders();
     if (!savedFolders.empty()) {
         this->Refresh();
-        ezui::BeginInvoke([this, savedFolders]() {
+        // 先创建一个空 TAB 作为第一个 TAB
+        AddNewTab();
+        int firstIdx = (int)m_tabPages.size() - 1;
+        ezui::BeginInvoke([this, savedFolders, firstIdx]() {
+            // 用第一个 TAB 加载第一个文件夹
+            bool first = true;
             for (const auto& folder : savedFolders) {
                 if (!folder.empty()) {
-                    AddNewTab();
-                    SelectFolderAndLoad(currentFileListView, folder);
+                    if (first && firstIdx >= 0 && firstIdx < (int)m_tabPages.size()) {
+                        // 第一个文件夹用第一个 TAB 加载
+                        FileListView* flv = nullptr;
+                        for (auto ctl : m_tabPages[firstIdx]->GetControls()) {
+                            flv = dynamic_cast<FileListView*>(ctl);
+                            if (flv) break;
+                        }
+                        if (flv) {
+                            SelectFolderAndLoad(flv, folder);
+                            currentFileListView = flv;
+                        }
+                        first = false;
+                    } else {
+                        AddNewTab();
+                        SelectFolderAndLoad(currentFileListView, folder);
+                    }
                 }
             }
-            // 恢复完成后更新状态栏为最后 TAB 的路径（文件数等异步扫描完成再更新）
+            // 恢复完成后更新状态栏为最后 TAB 的路径
             if (currentFileListView) {
                 std::wstring p = currentFileListView->GetFolderPath();
                 if (!p.empty()) {
@@ -170,13 +189,13 @@ void MainForm::Init() {
                 }
             }
         });
-    }
-    
-    if (m_tabPages.empty()) {
-        AddNewTab();
-        UpdateStatus(L"ready", L"");
     } else {
-        UpdateStatus(L"就绪", L"");
+        if (m_tabPages.empty()) {
+            AddNewTab();
+            UpdateStatus(L"ready", L"");
+        } else {
+            UpdateStatus(L"就绪", L"");
+        }
     }
     
     // 启用拖放文件/文件夹
