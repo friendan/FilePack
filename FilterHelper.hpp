@@ -43,6 +43,47 @@ public:
         return m_generalRules;
     }
 
+    // 获取指定文件夹的必需文件/子目录列表
+    std::vector<std::wstring> GetRequiredItems(const std::wstring& folderPath) {
+        EnsureLoaded();
+        std::vector<std::wstring> items;
+        // 提取文件夹名
+        std::wstring folderName = folderPath;
+        size_t pos = folderName.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            folderName = folderName.substr(pos + 1);
+        }
+        std::string path = AppUtil::WStrToStr(PathUtil::GetExeDir() + L"\\filter.toml");
+        try {
+            auto tbl = toml::parse_file(path);
+            std::string key = std::string("folder.") + AppUtil::WStrToStr(folderName);
+            auto* arr = tbl["filters"][key]["required"].as_array();
+            if (arr) {
+                for (auto& elem : *arr) {
+                    std::string val = elem.value_or("");
+                    if (!val.empty()) {
+                        items.push_back(AppUtil::StrToWStr(val));
+                    }
+                }
+            }
+        } catch (...) {
+        }
+        return items;
+    }
+
+    // 验证文件夹是否满足必需条件
+    // 返回所有缺少的项目，如果列表为空则表示验证通过
+    static std::vector<std::wstring> ValidateRequiredItems(const std::wstring& folderPath, const std::vector<std::wstring>& requiredItems) {
+        std::vector<std::wstring> missing;
+        for (const auto& item : requiredItems) {
+            std::wstring fullPath = folderPath + L"\\" + item;
+            if (!std::filesystem::exists(fullPath)) {
+                missing.push_back(item);
+            }
+        }
+        return missing;
+    }
+
     // 获取指定文件夹的过滤规则
     std::vector<std::wstring> GetFolderRules(const std::wstring& folderName) {
         EnsureLoaded();

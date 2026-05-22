@@ -511,6 +511,22 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
         wchar_t path[MAX_PATH];
         if (SHGetPathFromIDList(pidl, path)) {
             std::wstring folderPath(path);
+            // 验证必需条件
+            FilterHelper filter;
+            auto required = filter.GetRequiredItems(folderPath);
+            if (!required.empty()) {
+                auto missing = FilterHelper::ValidateRequiredItems(folderPath, required);
+                if (!missing.empty()) {
+                    std::wstring msg = L"文件夹缺少以下必需项目：\n";
+                    for (const auto& m : missing) {
+                        msg += L"  - " + m + L"\n";
+                    }
+                    msg += L"\n禁止选择此文件夹。";
+                    MessageBoxW(Hwnd(), msg.c_str(), L"条件不满足", MB_OK | MB_ICONWARNING);
+                    CoTaskMemFree(pidl);
+                    return;
+                }
+            }
             m_config.AddFolder(folderPath);
             fileListView->SetFolderPath(folderPath);
             this->Invalidate();
