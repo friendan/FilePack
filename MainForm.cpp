@@ -112,6 +112,7 @@ void MainForm::Init() {
                 }
             }
         }
+        pageAbout->SetVisible(false);
     }
     
     Button* btnTabAbout = (Button*)this->FindControl("btnTabAbout");
@@ -172,6 +173,9 @@ void MainForm::Init() {
     }
     
     if (m_tabPages.empty()) {
+        AddNewTab();
+        UpdateStatus(L"ready", L"");
+    } else {
         UpdateStatus(L"就绪", L"");
     }
     
@@ -396,7 +400,7 @@ void MainForm::AddNewTab() {
             
             int pageIndex = btnIndex - m_newTabStartIndex;
             Control* page = (pageIndex < (int)m_tabPages.size()) ? m_tabPages[pageIndex] : nullptr;
-            int switchTo = (btnIndex - 1 >= 0) ? btnIndex - 1 : 0;
+            int switchTo = (btnIndex > m_newTabStartIndex) ? btnIndex - 1 : m_newTabStartIndex;
             
             // 从配置中移除文件夹路径
             if (page) {
@@ -424,28 +428,34 @@ void MainForm::AddNewTab() {
                 if (page) {
                     mainTabs->Remove(page, true);
                 }
-                mainTabs->SetPageIndex(switchTo);
-                UpdateTabButtonStates(switchTo);
-                // 更新状态栏为当前 TAB 的路径
-                if (switchTo >= m_newTabStartIndex) {
-                    int tabIdx = switchTo - m_newTabStartIndex;
-                    if (tabIdx >= 0 && tabIdx < (int)m_tabPages.size()) {
-                        for (auto ctl : m_tabPages[tabIdx]->GetControls()) {
-                            FileListView* flv = dynamic_cast<FileListView*>(ctl);
-                            if (flv) {
-                                std::wstring p = flv->GetFolderPath();
-                                if (!p.empty()) {
-                                    UpdateStatus((p + L"  |  " + std::to_wstring(flv->GetFileCount())).c_str(), L"");
-                                } else {
-                                    UpdateStatus(L"ready", L"");
+                // 如果所有文件 TAB 都被删了，自动创建一个新的空 TAB
+                if (m_tabPages.empty()) {
+                    AddNewTab();
+                    UpdateStatus(L"ready", L"");
+                } else {
+                    mainTabs->SetPageIndex(switchTo);
+                    UpdateTabButtonStates(switchTo);
+                    // 更新状态栏为当前 TAB 的路径
+                    if (switchTo >= m_newTabStartIndex) {
+                        int tabIdx = switchTo - m_newTabStartIndex;
+                        if (tabIdx >= 0 && tabIdx < (int)m_tabPages.size()) {
+                            for (auto ctl : m_tabPages[tabIdx]->GetControls()) {
+                                FileListView* flv = dynamic_cast<FileListView*>(ctl);
+                                if (flv) {
+                                    std::wstring p = flv->GetFolderPath();
+                                    if (!p.empty()) {
+                                        UpdateStatus((p + L"  |  " + std::to_wstring(flv->GetFileCount())).c_str(), L"");
+                                    } else {
+                                        UpdateStatus(L"ready", L"");
+                                    }
+                                    currentFileListView = flv;
+                                    break;
                                 }
-                                currentFileListView = flv;
-                                break;
                             }
                         }
+                    } else {
+                        UpdateStatus(L"", L"");
                     }
-                } else {
-                    UpdateStatus(L"", L"");
                 }
                 this->Invalidate();
             });
