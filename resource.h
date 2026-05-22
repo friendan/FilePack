@@ -6,6 +6,7 @@
 #define IDR_FILELISTVIEW_LAYOUT         103
 #define IDI_APP_ICON                    102
 #define IDR_ABOUT_PNG                   104
+#define IDR_ABOUTBK_JPG                 105
 
 // Next default values for new objects
 // 

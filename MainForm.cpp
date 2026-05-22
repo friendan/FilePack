@@ -96,8 +96,23 @@ void MainForm::Init() {
     
     mainTabs->Remove(tempPage, true);
     
-    // pageAbout 作为 mainTabs 的第一个页
-    // 初始化后切到文件 TAB（如果有文件 TAB 的话由恢复逻辑处理）
+    // 加载 AboutBk.jpg 作为 pageAbout 的背景图片
+    Control* pageAbout = this->FindControl("pageAbout");
+    if (pageAbout) {
+        HRSRC hRsrc = FindResourceW(NULL, MAKEINTRESOURCEW(IDR_ABOUTBK_JPG), RT_RCDATA);
+        if (hRsrc) {
+            HGLOBAL hGlobal = LoadResource(NULL, hRsrc);
+            if (hGlobal) {
+                DWORD size = SizeofResource(NULL, hRsrc);
+                const void* data = LockResource(hGlobal);
+                if (data && size > 0) {
+                    Image* img = new Image(data, size);
+                    img->SizeMode = ImageSizeMode::Stretch;
+                    pageAbout->Style.BackImage = img;
+                }
+            }
+        }
+    }
     
     Button* btnTabAbout = (Button*)this->FindControl("btnTabAbout");
     if (btnTabAbout) {

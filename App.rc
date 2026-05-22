@@ -23,5 +23,6 @@ IDR_FILELISTVIEW_LAYOUT HTML                    "FileListView.htm"
 //
 
 IDR_ABOUT_PNG           RCDATA                  "About.png"
+IDR_ABOUTBK_JPG         RCDATA                  "AboutBk.jpg"
 
 /////////////////////////////////////////////////////////////////////////////
