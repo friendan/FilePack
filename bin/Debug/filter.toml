@@ -10,8 +10,9 @@
 #   4. 前缀匹配：路径以规则开头即匹配（如 temp 匹配 temp\sub\file.dll）
 #
 # 规则分类
-#   general：      通用规则，对所有文件夹生效
-#   folder."xxx"： 指定文件夹规则，只对文件夹名匹配的生效
+#   general：              通用规则，对所有文件夹生效
+#   ["folder.<名称>"]：    指定文件夹规则，只对文件夹名匹配的生效
+#                         整个 key 用引号包裹以保留点号
 
 [filters]
 
@@ -51,7 +52,7 @@ general = [
 
 # 示例（把注释去掉即可生效）：
 #
-# [folder."MyProject"]
+# ["folder.MyProject"]
 # rules = [
 #     "README.md",
 #     "LICENSE",
@@ -64,9 +65,13 @@ general = [
 #           如果缺少任何一项，将禁止选择此文件夹
 #           路径相对于被选择文件夹
 #
+# 注意：配置节为 ["folder.<文件夹名>"]，整个 key 用引号包裹以保留点号
+#
 # 示例：
-# [folder."test"]
+# ["folder.test"]
 # required = ["11.exe", "abc"]
 #
 # 表示选择 test 文件夹时，必须包含 11.exe 文件和 abc 子目录
-# 缺少任一条件则弹出提示并禁止选择
+# 缺少任一条件则禁止选择
+# ["folder.com"]
+# required = ["11.exe", "abc"]

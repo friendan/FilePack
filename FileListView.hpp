@@ -551,6 +551,48 @@ protected:
     }
     
 public:
+    // 在文件列表中显示错误提示
+    void ShowError(const std::wstring& title, const std::vector<std::wstring>& details) {
+        // 先清空旧数据
+        for (auto item : m_itemLayouts) {
+            m_contentLayout->Remove(item, true);
+        }
+        m_itemLayouts.clear();
+        m_checkBoxs.clear();
+        m_files.clear();
+        m_clickedRowIndex = -1;
+        m_anchorRowIndex = -1;
+        
+        // 用 Label 模拟行显示错误信息
+        auto addErrorLine = [this](const std::wstring& text, const Color& color) {
+            HLayout* row = new HLayout(m_contentLayout);
+            m_contentLayout->Add(row);
+            row->SetFixedHeight(m_itemHeight);
+            row->Style.BackColor = Color(255, 255, 255);
+            
+            Label* lbl = new Label(row);
+            row->Add(lbl);
+            lbl->SetText(text.c_str());
+            lbl->SetFixedHeight(m_itemHeight);
+            lbl->SetRateWidth(1.0f);
+            lbl->TextAlign = TextAlign::MiddleLeft;
+            lbl->Style.ForeColor = color;
+            lbl->Style.FontSize = 12;
+            lbl->Margin.Left = 8;
+            m_itemLayouts.push_back(row);
+        };
+        
+        addErrorLine(title, Color(200, 0, 0));
+        for (const auto& d : details) {
+            addErrorLine(L"  - " + d, Color(150, 50, 50));
+        }
+        
+        this->RefreshLayout();
+        m_scrollOffset = 0;
+        m_scrollBar.RefreshScroll();
+        this->Invalidate();
+    }
+    
     void TriggerSelectFolder() {
         if (!m_folderPath.empty()) {
             LoadFilesFromFolder(m_folderPath);

@@ -517,12 +517,7 @@ void MainForm::SelectFolderAndLoad(FileListView* fileListView) {
             if (!required.empty()) {
                 auto missing = FilterHelper::ValidateRequiredItems(folderPath, required);
                 if (!missing.empty()) {
-                    std::wstring msg = L"文件夹缺少以下必需项目：\n";
-                    for (const auto& m : missing) {
-                        msg += L"  - " + m + L"\n";
-                    }
-                    msg += L"\n禁止选择此文件夹。";
-                    MessageBoxW(Hwnd(), msg.c_str(), L"条件不满足", MB_OK | MB_ICONWARNING);
+                    fileListView->ShowError(L"禁止选择该文件夹，缺少如下文件或目录：", missing);
                     CoTaskMemFree(pidl);
                     return;
                 }

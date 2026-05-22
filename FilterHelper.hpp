@@ -56,8 +56,15 @@ public:
         std::string path = AppUtil::WStrToStr(PathUtil::GetExeDir() + L"\\filter.toml");
         try {
             auto tbl = toml::parse_file(path);
-            std::string key = std::string("folder.") + AppUtil::WStrToStr(folderName);
-            auto* arr = tbl["filters"][key]["required"].as_array();
+            std::string folderKey = std::string("folder.") + AppUtil::WStrToStr(folderName);
+            // 配置格式示例：["folder.com"]，即 tbl["folder.com"] 为 table
+            // 兼容两种格式：
+            // 1. tbl["filters"]["folder.xxx"]（[filters] 下的子表）
+            // 2. tbl["folder.xxx"]（顶层）
+            const auto* arr = tbl["filters"][folderKey]["required"].as_array();
+            if (!arr) {
+                arr = tbl[folderKey]["required"].as_array();
+            }
             if (arr) {
                 for (auto& elem : *arr) {
                     std::string val = elem.value_or("");
@@ -91,8 +98,11 @@ public:
         std::string path = AppUtil::WStrToStr(PathUtil::GetExeDir() + L"\\filter.toml");
         try {
             auto tbl = toml::parse_file(path);
-            auto key = std::string("folder.") + AppUtil::WStrToStr(folderName);
-            auto* arr = tbl["filters"][key]["rules"].as_array();
+            auto folderKey = std::string("folder.") + AppUtil::WStrToStr(folderName);
+            const auto* arr = tbl["filters"][folderKey]["rules"].as_array();
+            if (!arr) {
+                arr = tbl[folderKey]["rules"].as_array();
+            }
             if (arr) {
                 for (auto& elem : *arr) {
                     std::string val = elem.value_or("");
