@@ -178,8 +178,7 @@ public:
     void OnRightClick(const MouseEventArgs& mouseArgs) {
         HMENU hMenu = CreatePopupMenu();
         AppendMenuW(hMenu, MF_STRING, 1001, L"选中今天修改的文件");
-        AppendMenuW(hMenu, MF_STRING, 1002, L"选中前10行");
-        AppendMenuW(hMenu, MF_STRING, 1003, L"继续选10行");
+        AppendMenuW(hMenu, MF_STRING, 1002, L"选中到当前行");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hMenu, MF_STRING, 1004, L"取消选中所有行");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
@@ -196,12 +195,18 @@ public:
         case 1001:
             SelectAllTodayFiles();
             break;
-        case 1002:
-            SelectTopN(10);
+        case 1002: {
+            int endRow = min(m_clickedRowIndex + 1, (int)min(m_files.size(), m_checkBoxs.size()));
+            for (int i = 0; i < endRow; i++) {
+                CheckBox* cb = m_checkBoxs[i];
+                cb->SetCheck(true);
+                if (cb->CheckedChanged) {
+                    cb->CheckedChanged(cb, true);
+                }
+            }
             break;
-        case 1003:
-            SelectNextN(10);
-            break;
+        }
+
         case 1004:
             for (auto* cb : m_checkBoxs) {
                 cb->SetCheck(false);
