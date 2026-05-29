@@ -1,2 +1,2 @@
 @echo off
-cmake --build build --config Debug
+cmake --build build_debug --config Debug
