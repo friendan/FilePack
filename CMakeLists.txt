@@ -83,6 +83,11 @@ set(PROJECT_SOURCES
 
 
 add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES} ${EZUI_SOURCES} ${RESOURCE_FILES})
+
+# 根据配置设置不同的输出文件名
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OUTPUT_NAME "${PROJECT_NAME}$<$<CONFIG:Debug>:_dbg>$<$<CONFIG:Release>:_rel>"
+)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     archive_static
     zlibstatic

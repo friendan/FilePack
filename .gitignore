@@ -87,3 +87,5 @@ bin/Debug/*.pdb
 
 /bin/Debug/FilePack.exp
 /nul
+build_debug
+build_release
