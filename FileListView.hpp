@@ -69,42 +69,12 @@ public:
     }
     
     ~FileListView() {
-        HWND hWnd = Hwnd();
-        if (hWnd) {
-            RemoveWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this);
-        }
-    }
-    
-    static LRESULT CALLBACK StaticWndProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
-        if (uMsg == WM_RBUTTONDOWN) {
-            FileListView* self = (FileListView*)dwRefData;
-            if (!self) return DefSubclassProc(hW, uMsg, wParam, lParam);
-            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-            // 遍历父控件链，计算 FileListView 在窗口客户区的位置
-            int absX = 0, absY = 0;
-            Control* c = self;
-            while (c) {
-                auto r = c->GetRect();
-                absX += r.X;
-                absY += r.Y;
-                c = c->Parent;
-                if (c && c->IsWindow()) break;
-            }
-            // 只响应 FileListView 自身区域内的右键
-            if (pt.x >= absX && pt.x < absX + self->Width() &&
-                pt.y >= absY && pt.y < absY + self->Height()) {
-                MouseEventArgs args(Event::OnMouseDown, Point(pt.x - absX, pt.y - absY), MouseButton::Right);
-                self->OnRightClick(args);
-                return 0;
-            }
-        }
-        return DefSubclassProc(hW, uMsg, wParam, lParam);
     }
     
     void Init() {
         this->SetDockStyle(DockStyle::Fill);
         this->EventPassThrough = Event::OnMouseDoubleClick;
-
+        
         LoadXmlLayout();
         
         m_headerLayout = (HLayout*)this->FindControl("header");
@@ -120,6 +90,7 @@ public:
         
         // 表头复选框已删除
         
+        // FileListView 自身处理鼠标事件（包括右键菜单）
         if (m_contentLayout) {
             m_contentLayout->EventPassThrough = Event::OnMouseDoubleClick | Event::OnMouseDown;
             m_contentLayout->EventHandler = [this](Control* sender, EventArgs& args) {
@@ -131,22 +102,13 @@ public:
                             OnDoubleClickEmpty();
                         }
                     }
+                } else if (args.EventType == Event::OnMouseDown) {
+                    MouseEventArgs& mouseArgs = (MouseEventArgs&)args;
+                    if (mouseArgs.Button == MouseButton::Right) {
+                        OnRightClick(mouseArgs);
+                    }
                 }
             };
-        }
-
-        // 安装窗口子类化处理右键消息
-        HWND hWnd = Hwnd();
-        if (hWnd) {
-            SetWindowSubclass(hWnd, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
-        } else {
-            // Hwnd 尚不可用，延迟安装
-            ezui::BeginInvoke([this]() {
-                HWND h = Hwnd();
-                if (h) {
-                    SetWindowSubclass(h, &FileListView::StaticWndProc, (UINT_PTR)this, (DWORD_PTR)this);
-                }
-            });
         }
 
         this->Invalidate();
@@ -224,8 +186,8 @@ public:
         AppendMenuW(hMenu, MF_STRING, 1005, L"打包选中文件为 tar.gz");
         AppendMenuW(hMenu, MF_STRING, 1006, L"打包选中文件为 7z (LZMA2)");
 
-        POINT pt = { mouseArgs.Location.X, mouseArgs.Location.Y };
-        ClientToScreen(Hwnd(), &pt);
+        POINT pt;
+        GetCursorPos(&pt);
 
         UINT cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, Hwnd(), NULL);
         DestroyMenu(hMenu);
